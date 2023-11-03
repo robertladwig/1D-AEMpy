@@ -1794,6 +1794,7 @@ def boundary_module(
         piston_velocity = 1e-5 / 86400
         IP_m = IP / 10
     else:
+        piston_velocity = k600_to_kgas(k600 = k_vachon(wind = Uw, area = area[0]), temperature = Tair, gas = "O2")
         IP_m = IP
         
     #npp = p_max * (1 - np.exp(-IP * H/p_max)) * TP * conversion_constant * delta**(u - 20) * volume
@@ -2758,3 +2759,48 @@ def run_wq_model(
                'energy_ratio': energy_ratiom}
   
   return(dat)
+
+## functions for gas exchange
+def k_vachon(wind, area, param1 = 2.51, param2 = 1.48, param3 = 0.39):
+    #wnd: wind speed at 10m height (m/s)
+    #area: lake area (m2)
+    #params: optional parameter changes
+    k600 = param1 + (param2 * wind) + (param3 * wind * log(area/1000000, 10)) # units in cm per hour
+    k600 = k600 * 24 / 100 #units in m per d
+    return(k600)
+
+def get_schmidt(temperature, gas = "O2"):
+    t_range	= [4,35] # supported temperature range
+    if temperature < t_range[0] or temperature > t_range[1]:
+        print("temperature:", temperature)
+        raise Exception("temperature outside of expected range for kGas calculation")
+    
+    schmidt = pd.DataFrame({"He":[368,-16.75,0.374,-0.0036],
+                   "O2":[1568,-86.04,2.142,-0.0216],
+                  "CO2":[1742,-91.24,2.208,-0.0219],
+                  "CH4":[1824,-98.12,2.413,-0.0241],
+                  "SF6":[3255,-217.13,6.837,-0.0861],
+                  "N2O":[2105,-130.08,3.486,-0.0365],
+                  "Ar":[1799,-106.96,2.797,-0.0289],
+                  "N2":[1615,-92.15,2.349,-0.0240]})
+    gas_params = schmidt[gas]
+    a = gas_params[0]
+    b = gas_params[1]
+    c = gas_params[2]
+    d = gas_params[3]
+    
+    sc = a+b*temperature+c*temperature**2+d*temperature**3
+    
+    # print("a:", a, "b:", b, "c:", c, "d:", d, "sc:", sc)
+    
+    return(sc)
+
+def k600_to_kgas(k600, temperature, gas = "O2"):
+    n = 0.5
+    schmidt = get_schmidt(temperature = temperature, gas = gas)
+    sc600 = schmidt/600 
+    
+    kgas = k600 * (sc600**-n)
+    
+    print("k600:", k600, "kGas:", kgas)
+    return(kgas)
