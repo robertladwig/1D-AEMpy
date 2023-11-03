@@ -1794,9 +1794,12 @@ def boundary_module(
         piston_velocity = 1e-5 / 86400
         IP_m = IP / 10
     else:
-        breakpoint()
+        #breakpoint()
         k600 =  k_vachon(wind = Uw, area = area[0])
-        piston_velocity = k600_to_kgas(k600 = k600, temperature = Tair, gas = "O2")
+        piston_velocity = k600_to_kgas(k600 = k600, temperature = Tair, gas = "O2")/86400
+        if np.isnan(piston_velocity):
+            print('')
+            breakpoint()
         IP_m = IP
         
     #npp = p_max * (1 - np.exp(-IP * H/p_max)) * TP * conversion_constant * delta**(u - 20) * volume
@@ -1811,8 +1814,10 @@ def boundary_module(
     
     #breakpoint()
     
+    #piston_velocity = 1
     
-    o2[0] = (o2[0] +  # m/s g/m3 m2
+    #breakpoint()
+    o2[0] = (o2[0] +  # m/s g/m3 m2   m/s g/m3 m2 s
         (piston_velocity * (do_sat_calc(u[0], 982.2, altitude = 258) - o2[0]/volume[0]) * area[0] ) * dt)
     
     o2[(nx-1)] = o2[(nx-1)] + (delta**(u[(nx-1)] - 20) * sed_sink * area[nx-1] * o2[nx-1]/volume[nx-1]/(k_half +  o2[nx-1]/volume[nx-1])) * dt
@@ -2773,9 +2778,9 @@ def k_vachon(wind, area, param1 = 2.51, param2 = 1.48, param3 = 0.39):
 
 def get_schmidt(temperature, gas = "O2"):
     t_range	= [4,35] # supported temperature range
-    if temperature < t_range[0] or temperature > t_range[1]:
-        print("temperature:", temperature)
-        raise Exception("temperature outside of expected range for kGas calculation")
+    #if temperature < t_range[0] or temperature > t_range[1]:
+    #    print("temperature:", temperature)
+    #    raise Exception("temperature outside of expected range for kGas calculation")
     
     schmidt = pd.DataFrame({"He":[368,-16.75,0.374,-0.0036],
                    "O2":[1568,-86.04,2.142,-0.0216],
@@ -2804,5 +2809,5 @@ def k600_to_kgas(k600, temperature, gas = "O2"):
     
     kgas = k600 * (sc600**-n)
     
-    print("k600:", k600, "kGas:", kgas)
+    #print("k600:", k600, "kGas:", kgas)
     return(kgas)
