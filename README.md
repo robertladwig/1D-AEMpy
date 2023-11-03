@@ -1,7 +1,14 @@
 # One-dimensional Aquatic Ecosystem Model in Python (1D-AEMpy)
+<a href="url"><img src="1D-AEMpy_block.png" align="right" height="220" width="210" ></a>
 
-## authors
-Robert Ladwig, Bennett McAfee, Paul C Hanson
+-----
+
+:busts_in_silhouette: Robert Ladwig, Bennett McAfee, Paul C Hanson
+:email: [contact](mailto:ladwigjena@gmail.com)
+:computer: [more info](https://www.robert-ladwig.com)
+
+-----
+
 
 ## overview
 The modularized framework runs a vertical one-dimensional aquatic ecosystem model (AEM) for water temperature, dissolved oxygen and organic carbon (dissolved and particulate as well as labile and refractory) dynamics using the general equation form of:
