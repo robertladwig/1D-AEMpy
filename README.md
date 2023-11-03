@@ -1,5 +1,5 @@
 # One-dimensional Aquatic Ecosystem Model in Python (1D-AEMpy)
-<a href="url"><img src="1D-AEMpy_block.png" align="right" height="220" width="210" ></a>
+<a href="url"><img src="1D-AEMpy_block.png" align="right" height="220" width="220" ></a>
 
 -----
 
