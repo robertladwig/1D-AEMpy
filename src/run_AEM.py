@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from numba import jit
 
-#os.chdir("/home/robert/Projects/WQ_MCL/src")
-#os.chdir("C:/Users/ladwi/Documents/Projects/R/WQ_MCL/src")
-os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEDpy-BM/src")
+#os.chdir("/home/robert/Projects/1D-AEMpy/src")
+os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
+#os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEDpy-BM/src")
 from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
 
 
