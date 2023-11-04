@@ -1797,9 +1797,6 @@ def boundary_module(
         #breakpoint()
         k600 =  k_vachon(wind = Uw, area = area[0])
         piston_velocity = k600_to_kgas(k600 = k600, temperature = Tair, gas = "O2")/86400
-        if np.isnan(piston_velocity):
-            print('')
-            breakpoint()
         IP_m = IP
         
     #npp = p_max * (1 - np.exp(-IP * H/p_max)) * TP * conversion_constant * delta**(u - 20) * volume
