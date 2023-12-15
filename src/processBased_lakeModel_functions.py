@@ -1750,7 +1750,8 @@ def boundary_module(
         wind_factor = 1.0,
         p_max = 1.0/86400,
         IP = 0.1,
-        delta= 1.08,
+        theta_npp = 1.08,
+        theta_r = 1.08,
         conversion_constant = 0.1,
         sed_sink = -1.0 / 86400,
         k_half = 0.5,
@@ -1799,8 +1800,8 @@ def boundary_module(
         piston_velocity = k600_to_kgas(k600 = k600, temperature = Tair, gas = "O2")/86400
         IP_m = IP
         
-    #npp = p_max * (1 - np.exp(-IP * H/p_max)) * TP * conversion_constant * delta**(u - 20) * volume
-    npp = H * sw_to_par * IP_m * TP  * delta**(u - 20) * volume
+    #npp = p_max * (1 - np.exp(-IP * H/p_max)) * TP * conversion_constant * theta_npp**(u - 20) * volume
+    npp = H * sw_to_par * IP_m * TP  * theta_npp**(u - 20) * volume
     
     #breakpoint()
     o2 = o2n + dt * npp * 32/12 
@@ -1817,7 +1818,7 @@ def boundary_module(
     o2[0] = (o2[0] +  # m/s g/m3 m2   m/s g/m3 m2 s
         (piston_velocity * (do_sat_calc(u[0], 982.2, altitude = 258) - o2[0]/volume[0]) * area[0] ) * dt)
     
-    o2[(nx-1)] = o2[(nx-1)] + (delta**(u[(nx-1)] - 20) * sed_sink * area[nx-1] * o2[nx-1]/volume[nx-1]/(k_half +  o2[nx-1]/volume[nx-1])) * dt
+    o2[(nx-1)] = o2[(nx-1)] + (theta_r**(u[(nx-1)] - 20) * sed_sink * area[nx-1] * o2[nx-1]/volume[nx-1]/(k_half +  o2[nx-1]/volume[nx-1])) * dt
 
     #breakpoint()
     end_time = datetime.datetime.now()
@@ -1846,7 +1847,7 @@ def prodcons_module(
         nx,
         dt,
         dx,
-        delta= 1.08,
+        theta_r = 1.08,
         k_half = 0.5,
         resp_docr = -0.001,
         resp_docl = -0.01,
@@ -1886,7 +1887,7 @@ def prodcons_module(
          [0, 0, 0, 0, (pocln * resp_poc * consumption)]]
         return p,d
 
-    def solve_mprk(fun, y0, dt, resp, delta, u, volume, k_half):
+    def solve_mprk(fun, y0, dt, resp, theta_r, u, volume, k_half):
         
         #breakpoint()
         len_y0 = len(y0)
@@ -1897,7 +1898,7 @@ def prodcons_module(
         a = np.zeros_like(eye, dtype=float)
         r = np.zeros_like(a[:, 0], dtype=float)
         
-        consumption =  delta**(u-20) * (y[0]/volume)/(k_half +  y[0]/volume)
+        consumption =  theta_r**(u-20) * (y[0]/volume)/(k_half +  y[0]/volume)
         
         ci =0
         # Get the production and destruction term:
@@ -1950,7 +1951,7 @@ def prodcons_module(
     
     for dep in range(0, nx-1):
         mprk_res = solve_mprk(fun, y0 =  [o2n[dep], docrn[dep], docln[dep], pocrn[dep], pocln[dep]], dt = dt, 
-               resp = [resp_docr, resp_docl, resp_poc], delta = delta, u = u[dep],
+               resp = [resp_docr, resp_docl, resp_poc], theta_r = theta_r, u = u[dep],
                volume = volume[dep], k_half = k_half)
         o2[dep], docr[dep], docl[dep], pocr[dep], pocl[dep] = mprk_res[0]
         docr_respiration[dep], docl_respiration[dep], poc_respiration[dep] = [mprk_res[1], mprk_res[2], mprk_res[3]]
@@ -2195,7 +2196,8 @@ def run_wq_model(
   kd_snow = 0.9,
   kd_ice = 0.7,p_max = 1.0/86400,
   IP = 0.1,
-  delta= 1.08,
+  theta_npp = 1.08,
+  theta_r = 1.08,
   conversion_constant = 0.1,
   sed_sink = -1.0 / 86400,
   k_half = 0.5,
@@ -2476,7 +2478,8 @@ def run_wq_model(
         wind_factor = wind_factor,
         p_max = p_max,
         IP = IP,
-        delta= delta,
+        theta_npp = theta_npp,
+        theta_r = theta_r,
         conversion_constant = conversion_constant,
         sed_sink = sed_sink,
         k_half = k_half,
@@ -2510,7 +2513,7 @@ def run_wq_model(
         nx = nx,
         dt = dt,
         dx = dx,
-        delta= delta,
+        theta_r = theta_r,
         k_half = k_half,
         resp_docr = resp_docr,
         resp_docl = resp_docl,
