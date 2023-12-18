@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from numba import jit
 
-os.chdir("/home/robert/Projects/1D-AEMpy/src")
+#os.chdir("/home/robert/Projects/1D-AEMpy/src")
 #os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
-#os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEDpy-BM/src")
+os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEMpy/src")
 from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
 
 
@@ -32,8 +32,8 @@ meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
                      
 ## time step discretization                      
 hydrodynamic_timestep = 24 * dt
-total_runtime =  (365) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365
-startTime =   (140 + 365*12) * hydrodynamic_timestep/dt #150 * 24 * 3600
+total_runtime =  (1095) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365
+startTime =   (140 + 365*12) * hydrodynamic_timestep/dt - (365*24*2) #150 * 24 * 3600
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
 startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
@@ -115,7 +115,8 @@ res = run_wq_model(
     rho_snow = 250,
     p_max = 1/86400,
     IP = 3e-5/86400 ,#0.1, 3e-5
-    delta= 1.1, #1.08,
+    theta_npp = 1.08,
+    theta_r = 1.08, #1.08,
     conversion_constant = 1e-4,#0.1
     sed_sink = -0.06 / 86400, #0.01
     k_half = 0.5,
