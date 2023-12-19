@@ -11,7 +11,8 @@ from numba import jit
 
 #os.chdir("/home/robert/Projects/1D-AEMpy/src")
 #os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
-os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEMpy/src")
+#os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEMpy/src")
+os.chdir("C:/Users/au740615/Documents/Projects/1d_aempy/1D-AEMpy/src")
 from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
 
 
@@ -121,7 +122,7 @@ res = run_wq_model(
     sed_sink = -0.06 / 86400, #0.01
     k_half = 0.5,
     resp_docr = 0.0001/86400, # 0.001 0.0001
-    resp_docl = 0.01/86400, # 0.01 0.05
+    resp_docl = 0.05/86400, # 0.01 0.05
     resp_poc = 0.03/86400, # 0.1 0.001 0.0001
     settling_rate = 0.3/86400,
     sediment_rate = 0.3/86400,
@@ -213,7 +214,7 @@ ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(docl)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0, vmax = 7)
+sns.heatmap(np.transpose(np.transpose(docl)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0, vmax = 10)
 ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
            colors=['black', 'gray'],
            linestyles = 'dotted')
