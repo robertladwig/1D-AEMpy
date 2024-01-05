@@ -1466,11 +1466,11 @@ def mixing_module_minlake(
     # PE = g *delta_dens * volume_ratio * (delta_depth)
     
     
-    o2 =o2n*volume
-    docl =docln*volume
-    docr =docrn*volume
-    pocl =pocln*volume
-    pocr = pocrn*volume
+    o2 =o2*volume
+    docl =docl*volume
+    docr =docr*volume
+    pocl =pocl*volume
+    pocr = pocr*volume
     
     energy_ratio = KE
     
