@@ -1834,7 +1834,7 @@ def boundary_module(
       albedo = 0.3
       IceSnowAttCoeff = exp(-kd_ice * Hi) * exp(-kd_snow * (rho_fw/rho_snow)* Hs)
     elif not ice:
-      albedo = 0.1
+      albedo = albedo
       IceSnowAttCoeff = 1
     
     ## (1) HEAT ADDITION
@@ -1898,9 +1898,13 @@ def boundary_module(
     o2[0] = (o2[0] +  # m/s g/m3 m2   m/s g/m3 m2 s
         (piston_velocity * (do_sat_calc(u[0], 982.2, altitude = 258) - o2[0]/volume[0]) * area[0] ) * dt)
     
-    o2[(nx-1)] = o2[(nx-1)] - (theta_r**(u[(nx-1)] - 20) * sed_sink * area[nx-1] * o2[nx-1]/volume[nx-1]/(k_half +  o2[nx-1]/volume[nx-1])) * dt
+    nutr[(nx-1)] = nutr[(nx-1)] + (theta_r**(u[(nx-1)] - 20) * sed_sink * area[nx-1] * o2[nx-1]/volume[nx-1]/(k_half +  o2[nx-1]/volume[nx-1])) * dt
 
-    nutr[(nx-1)] = nutr[(nx-1)] - (f_sod + d_sod/d_thick * o2[nx-1] * area[nx-1]) * dt * theta_r**(u[(nx-1)] - 20) 
+    o2[(nx-1)] = o2[(nx-1)] - (f_sod + d_sod/d_thick * o2[nx-1]/volume[nx-1] * area[nx-1]) * dt * theta_r**(u[(nx-1)] - 20) 
+    
+    # o2[(nx-1)] = o2[(nx-1)] - (theta_r**(u[(nx-1)] - 20) * sed_sink * area[nx-1] * o2[nx-1]/volume[nx-1]/(k_half +  o2[nx-1]/volume[nx-1])) * dt
+
+    # nutr[(nx-1)] = nutr[(nx-1)] - (f_sod + d_sod/d_thick * o2[nx-1] * area[nx-1]) * dt * theta_r**(u[(nx-1)] - 20) 
 
     if o2[(nx-1)] < 0:
         o2[(nx-1)] = 0
@@ -1978,7 +1982,8 @@ def prodcons_module(
         sed_sink = -1.0 / 86400,
         piston_velocity = 1.0,
         sw_to_par = 2.114,
-        growth_rate = 1.1): 
+        growth_rate = 1.1,
+        grazing_ratio = 0.1): 
 
     
     ## (1) HEAT ADDITION
@@ -2031,7 +2036,7 @@ def prodcons_module(
     def fun(y, a, consumption, npp, growth, temp):
         #"Production and destruction term for a simple linear model."
         o2n, docrn, docln, pocrn, pocln, algn, nutrn, = y
-        resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate = a
+        resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate,grazing_ratio = a
         consumption = consumption.item()
         npp = npp.item()
         growth = growth.item()
@@ -2042,7 +2047,7 @@ def prodcons_module(
          [0, 0, 0, 0, 0, 0, 0], # POC-R 4
          [0, 0, 0, 0, 0, algn * npp * (0.8), 0], # POC-L 5
          [0, 0, 0, 0, 0, growth * algn, 0],
-         [0, 0, 0, 0, 0, 0.1 *grazing_rate * algn * temp * 31/12, 0]]
+         [0, 0, 0, 0, 0, grazing_ratio *grazing_rate * algn * temp * 31/12, 0]]
         d = [[0, 32/12 * (docrn * resp_docr * consumption), 32/12 *(docln * resp_docl * consumption), 32/12 * (pocrn * resp_pocr * consumption), 32/12 * (pocln * resp_pocl * consumption), 0, 32/31 * (nutrn * resp_docl * consumption)],
          [0, (docrn * resp_docr * consumption), 0, 0, 0, 0, 0],
          [0, 0, (docln * resp_docl * consumption), 0, 0, 0, 0 ],
@@ -2129,7 +2134,7 @@ def prodcons_module(
     
     for dep in range(0, nx-1):
         mprk_res = solve_mprk(fun, y0 =  [o2n[dep], docrn[dep], docln[dep], pocrn[dep], pocln[dep], algn[dep], nutrn[dep]], dt = dt, 
-               resp = [resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate], theta_r = theta_r, u = u[dep],
+               resp = [resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate, grazing_ratio], theta_r = theta_r, u = u[dep],
                volume = volume[dep], k_half = k_half,
                H = H[dep], sw_to_par = sw_to_par, IP_m = IP_m, TP = TP, theta_npp = theta_npp)
         o2[dep], docr[dep], docl[dep], pocr[dep], pocl[dep], alg[dep], nutr[dep] = mprk_res[0]
@@ -2445,7 +2450,8 @@ def run_wq_model(
   W_str = None,
   f_sod = 1e-2,
   d_thick = 0.001,
-  growth_rate = 1.1):
+  growth_rate = 1.1,
+  grazing_ratio = 0.1):
     
   ## linearization of driver data, so model can have dynamic step
   Jsw_fillvals = tuple(daily_meteo.Shortwave_Radiation_Downwelling_wattPerMeterSquared.values[[0, -1]])
@@ -2816,7 +2822,8 @@ def run_wq_model(
         conversion_constant = conversion_constant,
         sed_sink = sed_sink,
         piston_velocity = piston_velocity, 
-        growth_rate = growth_rate)
+        growth_rate = growth_rate, 
+        grazing_ratio = grazing_ratio)
     
     o2 = prodcons_res['o2']
     docr = prodcons_res['docr']
