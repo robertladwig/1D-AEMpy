@@ -1,11 +1,11 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2024.1.1)  9 JAN 2024 09:07
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2024.1.9)  9 JAN 2024 09:15
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
 **1daempy_technical_documentation.tex
 (./1daempy_technical_documentation.tex
 LaTeX2e <2023-11-01>
-L3 programming layer <2023-12-11>
+L3 programming layer <2024-01-04>
 (c:/Users/au740615/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/koma-script/scrartcl.cls
 Document Class: scrartcl 2023/07/07 v3.41 KOMA-Script document class (article)
 (c:/Users/au740615/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/koma-script/scrkbase.sty
@@ -192,9 +192,9 @@ LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 )) (c:/Users/au740615/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/iftex/iftex.sty
 Package: iftex 2022/02/03 v1.0f TeX engine tests
 ) (c:/Users/au740615/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/unicode-math/unicode-math.sty (c:/Users/au740615/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/l3kernel/expl3.sty
-Package: expl3 2023-12-11 L3 programming layer (loader) 
+Package: expl3 2024-01-04 L3 programming layer (loader) 
 (c:/Users/au740615/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/l3backend/l3backend-xetex.def
-File: l3backend-xetex.def 2023-11-09 L3 backend support: XeTeX
+File: l3backend-xetex.def 2024-01-04 L3 backend support: XeTeX
 \g__graphics_track_int=\count270
 \l__pdf_internal_box=\box55
 \g__pdf_backend_object_int=\count271
@@ -1189,10 +1189,10 @@ Overfull \hbox (5.81017pt too wide) in paragraph at lines 765--765
 l.803 {``Application of {k-\textepsilon
                                        } Turbulence Models to Enclosed Basins: 
 Here is how much of TeX's memory you used:
- 38402 strings out of 476810
- 794625 string characters out of 5801435
- 1992109 words of memory out of 5000000
- 59816 multiletter control sequences out of 15000+600000
+ 38399 strings out of 476802
+ 794419 string characters out of 5801558
+ 1992177 words of memory out of 5000000
+ 59824 multiletter control sequences out of 15000+600000
  564516 words of font info for 88 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  108i,8n,120p,10926b,1031s stack positions out of 10000i,1000n,20000p,200000b,200000s

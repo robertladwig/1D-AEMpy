@@ -190,7 +190,7 @@
 
 \title{1D-AEMpy v0.1a - Technical Documentation}
 \author{Robert Ladwig}
-\date{2023-07-31}
+\date{2024-01-09}
 
 \begin{document}
 \maketitle
@@ -202,7 +202,7 @@ and water quality calculations to simulate the vertical dynamics of
 water temperature, dissolved oxygen, phytoplankton biomass, nutrient
 concentration, and aspects of organic carbon.
 \end{abstract}
-\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[boxrule=0pt, borderline west={3pt}{0pt}{shadecolor}, enhanced, breakable, sharp corners, frame hidden, interior hidden]}{\end{tcolorbox}}\fi
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[breakable, frame hidden, sharp corners, interior hidden, enhanced, borderline west={3pt}{0pt}{shadecolor}, boxrule=0pt]}{\end{tcolorbox}}\fi
 
 \hypertarget{overview}{%
 \subsection{Overview}\label{overview}}
@@ -219,7 +219,7 @@ both models depends primarily on the light extinction coefficient
 attenuation of the water column, as well as the derived eddy diffusivity
 governing the vertical diffusion of dissolved water quality variables.
 
-\begin{tcolorbox}[enhanced jigsaw, colframe=quarto-callout-note-color-frame, leftrule=.75mm, arc=.35mm, coltitle=black, titlerule=0mm, rightrule=.15mm, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, colbacktitle=quarto-callout-note-color!10!white, bottomtitle=1mm, toprule=.15mm, colback=white, left=2mm, opacitybacktitle=0.6, breakable, toptitle=1mm, bottomrule=.15mm, opacityback=0]
+\begin{tcolorbox}[enhanced jigsaw, breakable, toprule=.15mm, rightrule=.15mm, bottomtitle=1mm, left=2mm, bottomrule=.15mm, leftrule=.75mm, opacityback=0, toptitle=1mm, arc=.35mm, coltitle=black, colframe=quarto-callout-note-color-frame, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, opacitybacktitle=0.6, titlerule=0mm, colback=white, colbacktitle=quarto-callout-note-color!10!white]
 
 Version 0.1a differs to v0.1 in a set of important aspects:
 
@@ -531,7 +531,7 @@ SNR = (F_{NUTR} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
 \(k_{DO}\) is the half-saturation concentration of dissolved oxygen (g
 m-3).
 
-\begin{tcolorbox}[enhanced jigsaw, colframe=quarto-callout-note-color-frame, leftrule=.75mm, arc=.35mm, coltitle=black, titlerule=0mm, rightrule=.15mm, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, colbacktitle=quarto-callout-note-color!10!white, bottomtitle=1mm, toprule=.15mm, colback=white, left=2mm, opacitybacktitle=0.6, breakable, toptitle=1mm, bottomrule=.15mm, opacityback=0]
+\begin{tcolorbox}[enhanced jigsaw, breakable, toprule=.15mm, rightrule=.15mm, bottomtitle=1mm, left=2mm, bottomrule=.15mm, leftrule=.75mm, opacityback=0, toptitle=1mm, arc=.35mm, coltitle=black, colframe=quarto-callout-note-color-frame, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, opacitybacktitle=0.6, titlerule=0mm, colback=white, colbacktitle=quarto-callout-note-color!10!white]
 
 In v0.1, SOD is quantified using Michaelis-Menten kinetics: \[
 SOD = (F_{DO} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
@@ -608,7 +608,7 @@ P_{nutr} - D_{nutr} = p_3 p_4 M_{phyto} R_{molar}  \theta_{GPP}^{T-20} - RSP_{nu
 material is converted from the grazer into nutrients, similar to an
 excretion rate).
 
-\begin{tcolorbox}[enhanced jigsaw, colframe=quarto-callout-note-color-frame, leftrule=.75mm, arc=.35mm, coltitle=black, titlerule=0mm, rightrule=.15mm, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, colbacktitle=quarto-callout-note-color!10!white, bottomtitle=1mm, toprule=.15mm, colback=white, left=2mm, opacitybacktitle=0.6, breakable, toptitle=1mm, bottomrule=.15mm, opacityback=0]
+\begin{tcolorbox}[enhanced jigsaw, breakable, toprule=.15mm, rightrule=.15mm, bottomtitle=1mm, left=2mm, bottomrule=.15mm, leftrule=.75mm, opacityback=0, toptitle=1mm, arc=.35mm, coltitle=black, colframe=quarto-callout-note-color-frame, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, opacitybacktitle=0.6, titlerule=0mm, colback=white, colbacktitle=quarto-callout-note-color!10!white]
 
 In v0.1, no production terms are used as GPP is included in the boundary
 flux module. Therefore, the following consumption terms are used: \[
