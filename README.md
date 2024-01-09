@@ -1,5 +1,5 @@
 # One-dimensional Aquatic Ecosystem Model in Python (1D-AEMpy)
-<a href="url"><img src="1D-AEMpy_block.png" align="right" height="220" width="200" ></a>
+<a href="url"><img src="figures/1D-AEMpy_block.png" align="right" height="220" width="200" ></a>
 
 -----
 
@@ -17,8 +17,8 @@ $A \frac{\partial T}{\partial t}=\frac{\partial}{\partial z}(A K_z \frac{\partia
 
 $A \frac{\partial C}{\partial t} + w \frac{\partial C}{\partial z} - \frac{\partial}{\partial z}(A K_z \frac{\partial C}{\partial z}) = P(C) - D(C)$
 
-where $T$ is water temperature, and $C$ represents a water quality state variable. Water temperature and heat transport are simulated using an eddy-diffusion approach in which the turbulent eddy diffusivity coefficients are parameterized based on the gradient Richardson number. To ensure stability, we apply the implicit Crank-Nicolson scheme for the diffusive transport. Production and consumption terms of the water quality dynamics (dissolved oxygen and organic carbon) are simulated using a modified Patankar Runge-Kutta scheme to ensure mass conservation and to prevent unrealistic negative values. Net primary production is acting as a boundary condition based on vertical light limitation, integrated total phosphorus concentrations, and water temperature. Convective wind mixing is parameterized based on an integral energy approach.
+where $T$ is water temperature, and $C$ represents a water quality state variable. Water temperature and heat transport are simulated using an eddy-diffusion approach in which the turbulent eddy diffusivity coefficients are parameterized based on the gradient Richardson number. To ensure stability, we apply the implicit Crank-Nicolson scheme for the diffusive transport. Production and consumption terms of the water quality dynamics (dissolved oxygen, phytoplankton biomass, nutrients and organic carbon) are simulated using a modified Patankar Runge-Kutta scheme to ensure mass conservation and to prevent unrealistic negative values. Convective wind mixing is parameterized based on an integral energy approach.
 
-![](conceptual_model.png)<!-- -->
+![](figures/conceptual_model.png)<!-- -->
 
-![](processes.png)<!-- -->
+![](figures/processes.png)<!-- -->
