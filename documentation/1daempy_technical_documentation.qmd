@@ -4,7 +4,7 @@ format:
   html:
     toc: true
     html-math-method: katex
-date: 2023-07-31
+date: 2024-01-09
 author:
   - name: Robert Ladwig
     orcid: 0000-0001-8443-1999
@@ -31,9 +31,15 @@ editor_options:
 
 This documentation describes the current version 0.1a of 1D-AEMpy, which includes hydrodynamic calculations coupled to a functional aquatic ecosystem model that explicitly simulates dissolved oxygen, phytoplankton biomass, a nutrient concentration (simulating reactive phosphorus), labile particulate organic carbon (POC-l), labile dissolved organic carbon (DOC-l), refractory particulate organic carbon (POC-r), and refractory dissolved organic carbon (DOC-r). The coupling between both models depends primarily on the light extinction coefficient (function of the sum of organic carbon concentrations) to the heat attenuation of the water column, as well as the derived eddy diffusivity governing the vertical diffusion of dissolved water quality variables.
 
-This version differs to v0.1 in one important aspect:
+:::{.callout-note}
+Version 0.1a differs to v0.1 in a set of important aspects:
 
--   v0.1 only simulates POC-l, DOC-l, POC-r, and DOC-r for water quality (meaning it essentially only captures main metabolism reactions)
+-   v0.1 only simulates POC-l, DOC-l, POC-r, and DOC-r for water quality (meaning it essentially only captures the main metabolism reactions)
+-   this means that in v0.1, GPP is a not dependent on any other state variable, but only on environmental conditions (light, nutrients)
+-   v0.1 uses a time-dependent boundary condition for the internal availability of nutrients, i.e., TP
+-   v0.1 does not include external mass fluxes, e.g., for POC-r and POC-l
+:::
+
 
 1D-AEMpy iteratively runs 8 modules to update the states of a set of model variables.
 
@@ -178,6 +184,13 @@ A \frac{\partial C}{\partial t} + w \frac{\partial C}{\partial z} - \frac{\parti
 $$
 where $w$ is a sinking rate, $P(C)$ is a production term, and $D(C)$ is a consumption (destruction) term.
 
+The main feedback of water quality to hydrodynamics is via the light extinction coefficient:
+
+$$
+k_d = k_{d, water} + k_{d, DOC} \overline{C_{DOC}} +  k_{d, POC} \overline{C_{POC}}
+$$
+where there are specific light extinction coefficients for background water, DOC and POC, $k_{d, water}$, $k_{d, DOC}$ and $k_{d, POC}$, respectively, as well as the average sum of DOC and POC concentrations, $\overline{C_{DOC}}$ and $\overline{C_{POC}}$, respectively, from the surface to the mean depth of the lake.
+
 The water quality simulation is split into three modules dealing with (f) effects of external and internal boundaries, (g) internal production and conumption pathways, and (h) vertical transport.
 
 ### f) Boundary fluxes
@@ -204,32 +217,46 @@ SNR = (F_{NUTR} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
 $$
 where $F_{NUTR}$ is an idealized area flux rate (g m<sup>-2</sup> s<sup>-1</sup>), and $k_{DO}$ is the half-saturation concentration of dissolved oxygen (g m<sup>-3</sup>).
 
+:::{.callout-note}
+In v0.1, SOD is quantified using Michaelis-Menten kinetics:
+$$
+SOD = (F_{DO} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
+$$
+
+Furter, GPP is quantified as a direct addition to oxygen, POC-l, and DOC-l at every time step using a forward Euler scheme:
+
+$$
+GPP = R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+$$
+where $R_{molar}$ is the respective molar ratio to convert from carbon units into something else, $p_1$ is the conversion from short-wave radiation to PAR (2.114), and $I_P$ is a calibration coeffcient.
+
+$$
+M_{DO}^{t} = M_{DO}^{t-1} + \Delta t * GPP 
+$$
+$$
+M_{POC-l}^{t} = M_{POC-l}^{t-1} + 0.2 \Delta t * GPP 
+$$
+$$
+M_{DOC-l}^{t} = M_{DOC-l}^{t-1} + 0.8 \Delta t * GPP 
+$$
+
+:::
 
 ### g) Production and consumption
 
-The model tracks the mass dynamics of dissolved oxygen, $M_{DO}$, phytoplankton biomass, $M_{phyto}$, nutrients, $M_{nutr}$, labile particulate organic carbon, $M_{POC-l}$, labile dissolved organic carbon, $M_{DOC-l}$, refractory particulate organic carbon, $M_{POR-r}$, and refractory dissolved organic carbon, $M_{POC-l}$. The respective concentrations, $C$ were quantified by dividng the masses with the voume. For internal production and consumption fluxes, we applied the 2nd-order Modified Patankar-Runge-Kutta scheme, which is mass conservative and unconditionally positive (@burchard_patankar_2003):
-$$
-C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
-$$
-$$
-C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
-$$
-$$
-\text{with } i = 1, ..., I
-$$
-where $i$ determines the current water quality constituent, $P$ is a source term, and $D$ is a sink term.
+The model tracks the mass dynamics of dissolved oxygen, $M_{DO}$, phytoplankton biomass, $M_{phyto}$, nutrients, $M_{nutr}$, labile particulate organic carbon, $M_{POC-l}$, labile dissolved organic carbon, $M_{DOC-l}$, refractory particulate organic carbon, $M_{POR-r}$, and refractory dissolved organic carbon, $M_{POC-l}$. The respective concentrations, $C$ were quantified by dividing the masses with the voume. 
 
 For production terms, gross primary production was quantified as
 $$
-GPP = C_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
 $$
 where $R_{molar}$ is the respective molar ratio to convert from carbon units into something else, $p_1$ is the conversion from short-wave radiation to PAR (2.114), and $I_P$ is a calibration coeffcient.
 
 Respiration was quantified as depending on oxygen availability
 $$
-RSP = C_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
+RSP = M_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
 $$
-with $C_{i}$ either being nutrient, POC-l, DOC-l, POC-r, or DOC-r, and $R_i$ is the respective respiration rate.
+with $M_{i}$ either being nutrient, POC-l, DOC-l, POC-r, or DOC-r, and $R_i$ is the respective respiration rate.
 
 Phytoplankton growth was quantified similar to GPP
 $$
@@ -264,6 +291,38 @@ P_{nutr} - D_{nutr} = p_3 p_4 M_{phyto} R_{molar}  \theta_{GPP}^{T-20} - RSP_{nu
 $$
 with $p_4$ as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate).
 
+:::{.callout-note}
+In v0.1, no production terms are used as GPP is included in the boundary flux module. Therefore, the following consumption terms are used:
+$$
+P_{DO} - D_{DO} = - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r})
+$$
+$$
+P_{POC-l} - D_{POC-l} = - RSP_{POC-l} 
+$$
+$$
+P_{DOC-l} - D_{DOC-l} = - RSP_{DOC-r} 
+$$
+$$
+P_{POC-r} - D_{POC-r} =  - RSP_{POC-r} 
+$$
+$$
+P_{DOC-r} - D_{DOC-r} =  - RSP_{DOC-r} 
+$$
+:::
+
+#### Numerical implementation
+For internal production and consumption fluxes, we applied the 2nd-order Modified Patankar-Runge-Kutta scheme, which is mass conservative and unconditionally positive (@burchard_patankar_2003):
+$$
+C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
+$$
+$$
+C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
+$$
+$$
+\text{with } i = 1, ..., I
+$$
+where $i$ determines the current water quality constituent, $P$ is a source term, and $D$ is a sink term.
+
 ### h) Transport
 
 For vertical transport, sinking and diffusion were parameterized for particulate and dissolved substances, respectively. For phytoplankton biomass, sinking and diffusion were both applied.
@@ -280,14 +339,14 @@ Turbulent diffusion was applied to the dissolved substances according to the pre
 
 | Model parameter | Symbol | Description | Default value |
 |-----|:-----|------------:|:----:|
-| u      | $T$   |    Initial temperature conditions |   -   |
-| o2     |  $M_{DO}$ |   Initial oxygen conditions |   -   |
-| docr       | $M_{DOC-r}$    |    Initial DOC-r conditions |   -   |
-| docl      | $M_{DOC-l}$   |    Initial DOC-l conditions |   -   |
-| pocr     | $M_{POC-r}$  |    Initial POC-r conditions |   -   |
-| pocl       | $M_{POC-l}$    |    Initial POC-l conditions |   -   |
-| alg      | $M_{phyto}$   |   Initial phytoplankton conditions |   -   |
-| nutr     | $M_{nutr}$  |   Initial nutrient conditions |   -   |
+| u      | $T$   |    Initial temperature conditions (C) |   -   |
+| o2     |  $M_{DO}$ |   Initial oxygen conditions (g)|   -   |
+| docr       | $M_{DOC-r}$    |    Initial DOC-r conditions (g)|   -   |
+| docl      | $M_{DOC-l}$   |    Initial DOC-l conditions (g)|   -   |
+| pocr     | $M_{POC-r}$  |    Initial POC-r conditions (g)|   -   |
+| pocl       | $M_{POC-l}$    |    Initial POC-l conditions (g)|   -   |
+| alg      | $M_{phyto}$   |   Initial phytoplankton conditions (g)|   -   |
+| nutr     | $M_{nutr}$  |   Initial nutrient conditions (g) |   -   |
 | startTime       | -    |     Start time-date (s) |   -    |
 | endTime      | -   |    End time-date (s) |   -   |
 | area     | $A$  |   Depth-discrete areas (m<sup>2</sup>) |  -   |
@@ -303,62 +362,62 @@ Turbulent diffusion was applied to the dissolved substances according to the pre
 | ice       | -    |  Initial ice condition, TRUE or FALSE |   FALSE   |
 | Hi      | $h_{ice}$   |    Initial ice thickness (m) |   0   |
 | Hs     | -  |   Initial snow thickness (m) |  0   |
-| Hsi       | 1    |     Initial snow ice thickness (m) |   0    |
+| Hsi       | -    |     Initial snow ice thickness (m) |   0    |
 | iceT      | -   | Initial moving average temperature for ice (C) |   6   |
 | supercooled     | - |   Initial amount of layers below freezing point  |  0   |
 | diffusion_method       | -    |     Numerical method for $K_z$ |   "pacanowskiPhilander"    |
 | scheme      | -   |  Numerical method for diffusion |   "implicit"   |
-| km     | $K_m$  |   Background eddy diffusivity (m<sup>2</sup>s<sup>-1</sup>) |  $1.4 10^{-7}$   |
-| k0       | -    |   Adjustable eddy diffusivity parameter  (m<sup>2</sup>s<sup>-1</sup>) |   $1.0 10^{-2}$     |
+| km     | $K_m$  |   Background eddy diffusivity (m<sup>2</sup>s<sup>-1</sup>) |  $1.4 *10^{-7}$   |
+| k0       | -    |   Adjustable eddy diffusivity parameter  (m<sup>2</sup>s<sup>-1</sup>) |   $1.0 *10^{-2}$     |
 | weight_kz      | -   |    Weighting of eddy diffusivity |   0.5   |
 | kd_light     | $k_d$  |   Light attenuation (m<sup>-1</sup>, ignored since v0.1) |  0.6   |
-| densThresh       | -   |   Density cutoff (kg m<sup>-3</sup>) |    $1.0 10^{-2}$     |
+| densThresh       | -   |   Density cutoff (kg m<sup>-3</sup>) |    $1.0 * 10^{-2}$     |
 | albedo      | $\alpha$   |    Albedo |   0.1   |
 | eps     | -  |   Emissivity of water |  0.97   |
 | emissivity     | -  |   Emissivity of water (same as eps) |  0.97   |
-| sigma      | -   |    Stefan-Boltzmann constant (W m<sup>-2</sup>K<sup>-4</sup>) |   $5.67 10^{-8}$   |
+| sigma      | -   |    Stefan-Boltzmann constant (W m<sup>-2</sup>K<sup>-4</sup>) |   $5.67 *10^{-8}$   |
 | sw_factor     | -  |   Multiplier for short-wave radiation |  1.0   |
 | wind_factor     | -  |   Multiplier for wind speed |   1.0    |
 | at_factor      | -  |   Multiplier for air temperature  |   1.0   |
 | turb_factor    | -  |   Multiplier for turbulent heat fluxes  |  1.0   |
 | p2       | -    |    Ignored since v0.1|   1.0    |
 | B      | -   |  Ignored since v0.1   |   0.61   |
-| g     | $g$  |   Gravitational acceleration |  9.81   |
+| g     | $g$  |   Gravitational acceleration (m s<sup>-2</sup>)|  9.81   |
 | Cd       | $C_D$    |  Momentum coefficient of wind |   0.0013   |
 | meltP     | -  |   Multiplier for ice melting |  1.0   |
 | dt_iceon_avg       | -   |  Ratio of ice forming temperature |   0.8   |
-| Hgeo      | $H_{geo}   |    Geothermal heat flux (W m<sup>-2</sup>) |   0.1   |
+| Hgeo      | $H_{geo}$   |    Geothermal heat flux (W m<sup>-2</sup>) |   0.1   |
 | KEice     | -  |   TKE multiplier for ice conditions (ignored since v0.1)  |  0   |
 | Ice_min       | -    |     Minimum ice thickness (m) |   0.1    |
 | pgdl_mode      | -   |  Additional data processing |   "on"   |
 | rho_snow     | $\rho_{snow}$  |   Initial snow density (kg m<sup>-3</sup>) |  250   |
 | p_max       | -    |  Multiplier for GPP (ignored since v0.1) |   1/86400    |
-| IP      | $I_P$   |    Calibration coefficient for GPP |   $3.0 10^{-6}$/86400   |
+| IP      | $I_P$   |    Calibration coefficient for GPP |   $3.0 *10^{-6}$/86400   |
 | theta_npp     | $\theta_{GPP}$  |  Arrhenius temperature multiplier |  1.0   |
 | theta_r       |$\theta_{R}$  |  Arrhenius temperature multiplier |  1.08   |
-| conversion_constant      | -   |     Multiplier for GPP (ignored since v0.1) |   $1.0 10^{-4}$   |
-| sed_sink     | $F_{nutr}$  |   Idealized flux rate (g m<sup>-2</sup> s<sup>-1</sup>)|  0.01/86400   |
-| k_half       | $k_{DO}    |   Half-saturation concentration (g m<sup>-3</sup>)  |   0.5    |
-| resp_docr      | 12   |    12 |   12   |
-| resp_docl     | 123  |   123 |  123   |
-| resp_pocr       | 1    |     1 |   1    |
-| resp_pocl      | 12   |    12 |   12   |
-| grazing_rate     | 123  |   123 |  123   |
-| pocr_settling_rate       | 1    |     1 |   1    |
-| pocl_settling_rate     | 123  |   123 |  123   |
-| algae_settling_rate       | 1    |     1 |   1    |
-| sediment_rate      | 12   |    12 |   12   |
-| piston_velocity     | 123  |   123 |  123   |
-| light_water       | 1    |     1 |   1    |
-| light_doc      | 12   |    12 |   12   |
-| light_poc     | 123  |   123 |  123   |
-| mean_depth       | 1    |     1 |   1    |
-| W_str      | 12   |    12 |   12   |
-| tp_inflow     | 123  |   123 |  123   |
-| pocr_inflow       | 1    |     1 |   1    |
-| pocl_inflow      | 12   |    12 |   12   |
-| f_sod     | 123  |   123 |  123   |
-| d_thick       | 1    |     1 |   1    |
-| growth_rate      | 12   |    12 |   12   |
-| grazing_ratio     | 123  |   123 |  123   |
+| conversion_constant      | -   |     Multiplier for GPP (ignored since v0.1) |   $1.0 *10^{-4}$   |
+| sed_sink     | $F_{nutr}$  |   Idealized nutrient source rate (g m<sup>-2</sup> s<sup>-1</sup>)|  0.01/86400   |
+| k_half       | $k_{DO}$    |   Half-saturation concentration (g m<sup>-3</sup>)  |   0.5    |
+| resp_docr      | -   |    DOC-r respiration rate (s<sup>-1</sup>) |   0.008/86400   |
+| resp_docl      | -   |    DOC-l respiration rate (s<sup>-1</sup>) |   0.008/86400   |
+| resp_pocr       | -   |    POC-r respiration rate (s<sup>-1</sup>) |   0.08/86400   |
+| resp_pocl      | -   |    POC-l respiration rate (s<sup>-1</sup>) |   0.08/86400   |
+| grazing_rate     | $p_3$  |   Grazing rate of phytoplankton (s<sup>-1</sup>) |  $3.0 *10^{-3}$/86400    |
+| pocr_settling_rate       | $v_{POC-r,settling}$    |     POC-r settling rate (m s<sup>-1</sup>) |   0.2/86400    |
+| pocl_settling_rate     | $v_{POC-l,settling}$    |     POC-l settling rate (m s<sup>-1</sup>) |   0.2/86400    |
+| algae_settling_rate       | $v_{phyto,settling}$    |     Phytoplankton settling rate (m s<sup>-1</sup>) |   $1.0 *10^{-5}$/86400    |
+| sediment_rate       | $v_{sedimentation}$    |     Sedimentation rate (m s<sup>-1</sup>) |   0.5/86400    |
+| piston_velocity     | $k_p$  |   Piston velocity for gas exchange (m s<sup>-1</sup>, ignored since v0.1) |  1.0/86400   |
+| light_water       | $k_{d, water}$    |     Background light extinction (m<sup>-1</sup>) |   0.125   |
+| light_doc      | $k_{d, DOC}$    |     DOC light extinction (m<sup>-1</sup>) |   0.02   |
+| light_poc    | $k_{d, POC}$    |     POC light extinction (m<sup>-1</sup>) |   0.7   |
+| mean_depth       | -    |     Mean depth of the lake (m) |   $\frac{\sum V}{A_s}$    |
+| W_str      | $C_{shelter}$   |    Manual wind-sheltering coefficient |   "None"   |
+| tp_inflow     | -  |   Boundary condition of total phosphorus (m<sup>-1</sup>, ignored in v0.1a) |  -   |
+| pocr_inflow         | -  |   Mass influx of POC-r (m<sup>-1</sup>, ignored in v0.1) |  -   |
+| pocl_inflow      | -  |   Mass flux of POC-l (m<sup>-1</sup>, ignored in v0.1) |  -   |
+| f_sod     | $F_{DO}$  |    Idealized oxygen sink rate (g m<sup>-2</sup> s<sup>-1</sup>, ignored in v0.1) |  0.1/86400   |
+| d_thick       | $\delta$    |     Thickness of diffusive boundary layer (m) |   0.001    |
+| growth_rate      | $p_2$   |    Phytoplankton growth ratio  (s<sup>-1</sup>)  |   $1.0 *10^{-3}$/86400    |
+| grazing_ratio     | $p_4$  |   Grazing ratio |  0.1   |
 

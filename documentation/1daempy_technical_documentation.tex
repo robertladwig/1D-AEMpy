@@ -1,0 +1,883 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  letterpaper,
+  DIV=11,
+  numbers=noendperiod]{scrartcl}
+
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else  
+    % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% Make \paragraph and \subparagraph free-standing
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newlength{\cslentryspacingunit} % times entry-spacing
+\setlength{\cslentryspacingunit}{\parskip}
+\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
+ {% don't indent paragraphs
+  \setlength{\parindent}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1
+  \let\oldpar\par
+  \def\par{\hangindent=\cslhangindent\oldpar}
+  \fi
+  % set entry spacing
+  \setlength{\parskip}{#2\cslentryspacingunit}
+ }%
+ {}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{#1\hfill\break}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{#1}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{#1}\break}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+
+\KOMAoption{captions}{tableheading}
+\makeatletter
+\@ifpackageloaded{tcolorbox}{}{\usepackage[skins,breakable]{tcolorbox}}
+\@ifpackageloaded{fontawesome5}{}{\usepackage{fontawesome5}}
+\definecolor{quarto-callout-color}{HTML}{909090}
+\definecolor{quarto-callout-note-color}{HTML}{0758E5}
+\definecolor{quarto-callout-important-color}{HTML}{CC1914}
+\definecolor{quarto-callout-warning-color}{HTML}{EB9113}
+\definecolor{quarto-callout-tip-color}{HTML}{00A047}
+\definecolor{quarto-callout-caution-color}{HTML}{FC5300}
+\definecolor{quarto-callout-color-frame}{HTML}{acacac}
+\definecolor{quarto-callout-note-color-frame}{HTML}{4582ec}
+\definecolor{quarto-callout-important-color-frame}{HTML}{d9534f}
+\definecolor{quarto-callout-warning-color-frame}{HTML}{f0ad4e}
+\definecolor{quarto-callout-tip-color-frame}{HTML}{02b875}
+\definecolor{quarto-callout-caution-color-frame}{HTML}{fd7e14}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\AtBeginDocument{%
+\ifdefined\contentsname
+  \renewcommand*\contentsname{Table of contents}
+\else
+  \newcommand\contentsname{Table of contents}
+\fi
+\ifdefined\listfigurename
+  \renewcommand*\listfigurename{List of Figures}
+\else
+  \newcommand\listfigurename{List of Figures}
+\fi
+\ifdefined\listtablename
+  \renewcommand*\listtablename{List of Tables}
+\else
+  \newcommand\listtablename{List of Tables}
+\fi
+\ifdefined\figurename
+  \renewcommand*\figurename{Figure}
+\else
+  \newcommand\figurename{Figure}
+\fi
+\ifdefined\tablename
+  \renewcommand*\tablename{Table}
+\else
+  \newcommand\tablename{Table}
+\fi
+}
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}
+\floatname{codelisting}{Listing}
+\newcommand*\listoflistings{\listof{codelisting}{List of Listings}}
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\@ifpackageloaded{subcaption}{}{\usepackage{subcaption}}
+\makeatother
+\makeatletter
+\@ifpackageloaded{tcolorbox}{}{\usepackage[skins,breakable]{tcolorbox}}
+\makeatother
+\makeatletter
+\@ifundefined{shadecolor}{\definecolor{shadecolor}{rgb}{.97, .97, .97}}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\makeatother
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={1D-AEMpy v0.1a - Technical Documentation},
+  pdfauthor={Robert Ladwig},
+  pdfkeywords={keyword 1 aquatic ecosystem modeling},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+\title{1D-AEMpy v0.1a - Technical Documentation}
+\author{Robert Ladwig}
+\date{2023-07-31}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+Technical documentation of the numerical implementation of the
+one-dimensinal Aquatic Ecosystem Model in Pyton (1D-AEMpy). This
+documentation describes the different modules that govern hydrodynamic
+and water quality calculations to simulate the vertical dynamics of
+water temperature, dissolved oxygen, phytoplankton biomass, nutrient
+concentration, and aspects of organic carbon.
+\end{abstract}
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[boxrule=0pt, borderline west={3pt}{0pt}{shadecolor}, enhanced, breakable, sharp corners, frame hidden, interior hidden]}{\end{tcolorbox}}\fi
+
+\hypertarget{overview}{%
+\subsection{Overview}\label{overview}}
+
+This documentation describes the current version 0.1a of 1D-AEMpy, which
+includes hydrodynamic calculations coupled to a functional aquatic
+ecosystem model that explicitly simulates dissolved oxygen,
+phytoplankton biomass, a nutrient concentration (simulating reactive
+phosphorus), labile particulate organic carbon (POC-l), labile dissolved
+organic carbon (DOC-l), refractory particulate organic carbon (POC-r),
+and refractory dissolved organic carbon (DOC-r). The coupling between
+both models depends primarily on the light extinction coefficient
+(function of the sum of organic carbon concentrations) to the heat
+attenuation of the water column, as well as the derived eddy diffusivity
+governing the vertical diffusion of dissolved water quality variables.
+
+\begin{tcolorbox}[enhanced jigsaw, colframe=quarto-callout-note-color-frame, leftrule=.75mm, arc=.35mm, coltitle=black, titlerule=0mm, rightrule=.15mm, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, colbacktitle=quarto-callout-note-color!10!white, bottomtitle=1mm, toprule=.15mm, colback=white, left=2mm, opacitybacktitle=0.6, breakable, toptitle=1mm, bottomrule=.15mm, opacityback=0]
+
+Version 0.1a differs to v0.1 in a set of important aspects:
+
+\begin{itemize}
+\tightlist
+\item
+  v0.1 only simulates POC-l, DOC-l, POC-r, and DOC-r for water quality
+  (meaning it essentially only captures the main metabolism reactions)
+\item
+  this means that in v0.1, GPP is a not dependent on any other state
+  variable, but only on environmental conditions (light, nutrients)
+\item
+  v0.1 uses a time-dependent boundary condition for the internal
+  availability of nutrients, i.e., TP
+\item
+  v0.1 does not include external mass fluxes, e.g., for POC-r and POC-l
+\end{itemize}
+
+\end{tcolorbox}
+
+1D-AEMpy iteratively runs 8 modules to update the states of a set of
+model variables.
+
+\begin{figure}
+
+{\centering \includegraphics{figures/conceptual_model.png}
+
+}
+
+\caption{\label{fig-best_model}Modularization of 1D-AEMpy.}
+
+\end{figure}
+
+\hypertarget{hydrodynamics}{%
+\subsection{Hydrodynamics}\label{hydrodynamics}}
+
+A one-dimensional hydrodynamic lake model was developed to simulate the
+temperature, heat flux and stratification dynamics in a lake. The
+algorithms are based on the eddy diffusion approach \textit{sensu}
+(Henderson-Sellers (1985)) and the MyLake (Saloranta and Andersen
+(2007)) model. Using the one-dimensional temperature diffusion equation
+for heat transport, we neglected any inflows and outflows, mass losses
+due to evaporation and water level changes: \[
+    \frac{\partial h}{\partial t}=0
+\]
+
+\[
+    A \frac{\partial T}{\partial t}=\frac{\partial}{\partial z}(A K_z \frac{\partial T}{\partial z}) + \frac{1}{{\rho_w c_p}}\frac{\partial H(z)}{\partial z}  + \frac{\partial A}{\partial z}\frac{H_{geo}}{\rho_w c_p}
+\]
+
+where \(h\) is the water level (m), \(A\) is lake area (m2), \(T\) is
+water temperature (\textdegree C), \(t\) is time (s), \(K_z\) is the
+vertical diffusion coefficient m2 s-1, \(H\) is internal heat generation
+due to incoming solar radiation (W m2), \(\rho_w\) is water density (kg
+m-3), \(c_p\) is specific heat content of water (J kg-1
+\textdegree C-1), and \(H_{geo}\) is internal geothermal heat generation
+(W m-2) (which was set to 0.1 W m-2 (Goudsmit et al. (2002))). Internal
+heat generation is implemented based on Beer-Lambert law for attenuation
+of short-wave radiation as a function of a constant light attenuation
+coefficient: \[
+    H(z)=\left(1-\alpha\right)I_s \text{exp}\left(-k_d z\right)
+\] where \(\alpha\) is the albedo (\(-\)), \(I_s\) is total incident
+short-wave radiation (W m-2), and \(k_d\) is a light attenuation
+coefficient (m-1). For the boundary conditions, we assume a Neumann type
+for the temperature diffusion equation at the atmosphere-surface
+boundary, and a zero-flux Neumann type at the bottom: \[
+    \rho_w c_p(K_z \frac{\partial T}{\partial z})_{surface}=H_{net}
+\] \[
+    K_z (\frac{\partial T}{\partial z})_{bottom}=0
+\] where \(H_{net}\) is the net heat flux exchange between atmosphere
+and water column (W m-2). The neat heat flux exchange consisted of four
+terms: \[
+    H_{net}=H_{lw}+H_{lwr}+H_v+H_c
+\] where \(H_{lw}\) is the incoming long-wave radiation (W m-2),
+\(H_{lwr}\) is emitted radiation from the water column (W m-2), \(H_v\)
+is the latent heat flux (W m-2), and \(H_c\) is the sensible heat flux
+(W m-2). Incoming and outgoing long-wave heat fluxes were derived using
+the formulations from Livingstone and Imboden (1989) and Goudsmit et al.
+(2002). The latent and sensible heat fluxes were calculated taking into
+account atmospheric stability using the algorithm by Verburg and
+Antenucci (2010).
+
+The calculation of a temperature profile at every time step is
+modularized into four steps: (a) heat generation from boundary
+conditions, (b) ice and snow formation, (c) vertical diffusion, (d)
+wind-induced mixing, and (e) convective overturn. The one-dimensional
+temperature diffusion equation was discretized using the implicit
+Crank-Nicolson scheme (Press et al. (2007)), which being second-order in
+both space and time allows the modeling time step to be dynamic without
+numerical stability issues. The model was implemented in Python 3.7 with
+a default time step of \(\Delta t = 3,600\) s and a default spatial
+discretization of \(\Delta z = 0.5\) m.
+
+\hypertarget{a-heat-generation-from-boundary-conditions}{%
+\subsubsection{a) Heat generation from boundary
+conditions}\label{a-heat-generation-from-boundary-conditions}}
+
+In the first step, the heat fluxes \(H\), \(H_{geo}\) and \(H_{net}\)
+are applied over the vertical water column.
+
+\hypertarget{b-ice-snow-and-snow-ice-formation}{%
+\subsubsection{b) Ice, snow, and snow ice
+formation}\label{b-ice-snow-and-snow-ice-formation}}
+
+In the second step, the ice and snow cover algorithm from MyLake
+@(saloranta\_mylakemulti-year\_2007) was applied to the model. Whenever
+water temperatures were equal or below the freezing point of water (set
+to 0 \textdegree C), ice formation was triggered. All layers with water
+temperatures below the freezing point were set to 0 \textdegree C, and
+the heat deficit from atmospheric heat exchange was converted into
+latent heat of ice formation. Stefan's law was applied to calculate ice
+thickness when air temperatures were below freezing point triggering ice
+formation (e.g., Leppäranta (1993)): \[
+     h_{ice}=\sqrt{h_{ice}^2+\frac{2 \kappa_{ice}}{\rho_{ice}L}(T_f-T_{ice})\Delta t}
+\] where \(h_{ice}\) is ice thickness (\(m\)), \(\kappa_{ice}\) is
+thermal conductivity of ice (\(W\) \(K^{-1}\) \(m^{-1}\)),
+\(\rho_{ice}\) is ice density (\(kg\) \(m^{-3}\)), \(L\) is latent heat
+of freezing (\(J\) \(kg^{-1}\)), \(T_f\) is water temperature at
+freezing point (\(T_f =\) 0 \(^\circ C\)), and \(T_{ice}\) is the
+temperature of the ice surface. The formation of a snow layer on top of
+the ice layer depended on the amount of precipitation. Further, whenever
+the weight of snow exceeded the buoyancy capacity of the ice layer,
+enough water to offset the exceedance forms a snow ice layer with the
+same properties as ice. When air temperatures were above the freezing
+point, ice and snow growth ceased, and snow and ice melting were
+initiated with ice melt requiring no snow to exist. Here, total energy
+of melting was taken from the total heat flux \(H_{net}\). Once the ice
+layer has disappeared, the default model routine continued. For more
+details, we refer the reader to Saloranta and Andersen (2007).
+
+\hypertarget{c-vertical-turbulent-diffusion}{%
+\subsubsection{c) Vertical (turbulent)
+diffusion}\label{c-vertical-turbulent-diffusion}}
+
+In the third step, vertical turbulent diffusion between adjacent grid
+cells was calculated. Here, we applied a centered difference
+approximation for temperature at the next time step. The vertical
+turbulent diffusion coefficients, \(K_t\), were calculated using an
+empirical relationship depending on the Richardson number: \[
+    K_z = \frac{K_0}{(1+5 Ri(z))^2} + K_m
+\] where \(K_0\) is an adjustable parameter (set to \(10^{-2}\) m s-2)
+\(R_i\) is the Richardson number, and \(K_m\) is the background eddy
+diffusivity (Pacanowski and Philander (1981), Jabbari et al. (2023)).
+The Richardson number was quantified as: \[
+    R_i= \frac{-1 + [1+ 40 N^2 k^2 z^2 / \left({w^*}^2 \text{exp}(-2 k^* z)\right)]^{(1/2)}}{20}
+\] with \(k\) as the Karman constant (\(k=0.4\)), and the squared
+buoyancy frequency,
+\(N^2=\frac{g}{\rho_w}\frac{\partial \rho_w}{\partial z}\) (\(s^{-2}\))
+(Henderson-Sellers (1985)). Friction velocity \(w^*\) was calculated as:
+\[
+    w^*= C_D U_2 
+\] where the drag coefficient \(C_D\) was set to \(1.3\) x \(10^{-3}\),
+and \(U_2\) is the wind speed at 2 m above surface (m s-1). All values
+of \(N^2\) less than \(7.0\) x \(10^{-5}\) s-2 were set to \(7.0\) x
+\(10^{-5}\) s-2 (Hondzo and Stefan (1993)).
+
+To replicate a lag in the mixing dynamics, we set the values of \(K_z\)
+to the average between the current profile and the one from the previous
+time step (Piccolroaz and Toffolon (2013)).
+
+\hypertarget{numerical-implementation}{%
+\paragraph{Numerical implementation}\label{numerical-implementation}}
+
+The implicit Crnak-Nicolson scheme, whichis second-order derivative in
+space and time, was applied to solve the one-dimensional temperature
+transport equation for the diffusive transport. Here, we average the
+response in space between the current and the next time step: \[
+A \frac{\partial T}{\partial t}=A K_z \frac{\partial T}{\partial z}
+\] \[
+A \frac{T_i^{n+1} - T_i^n}{\Delta t} = \frac{1}{2} [A K_z \frac{T_{i+1}^{n+1} - 2 T_i^{n+1} + T_{i-1}^{n+1}}{\Delta z^2} +  A K_z \frac{T_{i+1}^{n} - 2 T_i^n + T_{i-1}^n}{\Delta z^2}]
+\] Here, we can apply \(\alpha = A K_z \frac{\Delta t}{\Delta z^2}\),
+transforming the equation to: \[
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} =\frac{\alpha}{2} T_{i+1}^{n} + (A-\alpha)T_{i}^{n}+ \frac{\alpha}{2}T_{i-1}^{n}
+\] \[
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} = R_i^n
+\] where the right-hand side quantity \(R_i^n\) is known at the
+beginning of each time step.
+
+In the current version, we asusme static Dirichlet boundary conditions
+for the diffusive transport, which transforms the equation into a matrix
+(given here for an example for 5 times 5 rows and columns): \[
+\begin{bmatrix}
+1 & 0 & 0 & 0 &0 \\
+- \frac{\alpha}{2} & 1+\alpha & - \frac{\alpha}{2} & 0 & 0 \\
+0 &- \frac{\alpha}{2} & 1+\alpha & - \frac{\alpha}{2} & 0  \\
+0 & 0 &- \frac{\alpha}{2} & 1+\alpha & - \frac{\alpha}{2} \\
+0 & 0 & 0 & 0 & 1
+\end{bmatrix} 
+\begin{bmatrix} T_1^{n+1} \\  
+T_2^{n+1} \\ 
+ T_3^{n+1} \\ 
+  T_4^{n+1} \\ 
+   T_5^{n+1} 
+\end{bmatrix} =
+\begin{bmatrix} T_1^n \\  
+R_2^n \\ 
+ R_3^n \\ 
+  R_4^n \\ 
+   T_5^n
+\end{bmatrix} 
+\]
+
+\hypertarget{d-wind-induced-mixing}{%
+\subsubsection{d) Wind-induced mixing}\label{d-wind-induced-mixing}}
+
+To ensure an adequate representation of the effects of wind-induced
+mixing, which was not incorporated into the turbulent diffusive
+transport step, an additional step based on the concept of integral
+energy was applied following the algorithms by Saloranta and Andersen
+(2007) and Ford and Stefan (1980). Generally, the avaible external
+turbulent kinetic energy (TKE) is compared to the potential energy of
+the water column that is needed to lift up denser water from below a
+mixed layer into a newly formed mixed layer until the external TKE is
+depleted. TKE was quantified as: \[
+TKE = C_{shelter} A_s \sqrt{\frac{\tau^3}{\rho_w}} \Delta t
+\] where \(C_{shelter}\) is a wind-sheltering coefficient, and \(\tau\)
+is the wind shear stress. \(C_{shelter}\) was parameterized based on
+Hondzo and Stefan (1993): \[
+C_{shelter} = 1.0 - exp(-0.3 A_s)
+\] TKE is compared with the available potential energy (PE) in the water
+column: \[
+PE = g \Delta \rho_w \frac{V_{mixed} V_z}{V_{mixed} + V_z} (z_{mixed} +\Delta z_{M, z} - z_{M, mixed})
+\] where \(\Delta \rho_w\) is the density difference between layer \(z\)
+and the mixed-layer (epilimnion) density, \(V_{mixed}\) is the
+mixed-layer volume, and \(\Delta z_{M, z}\) is the distance from layer
+\(z\)'s center of mass, \(z_M\), to the bottom of the mixed-layer.
+
+If TKE \(\geq\) PE, then layer \(z\) will be mixed into the mixed layer
+(the epilimnion). This also includes water quality variables, which will
+be volume-averaged. Once TKE \(<\) PE, the remaining energy will be used
+for partial mixing as in Saloranta and Andersen (2007).
+
+\hypertarget{e-convective-overturn}{%
+\subsubsection{e) Convective overturn}\label{e-convective-overturn}}
+
+In the final step, any density instabilities over the vertical water
+column were mixed with the first stable layer below an unstable layer.
+Here, we applied the area weighed mean of temperature between two layers
+to calculate the new temperature of the previously unstable grid cell.
+Density differences between two layers were averaged until the
+difference was equal or less than \(1\) x \(10^{-3}\) kg m-3. \{An
+arbitrary cutoff of \(1\) x \(10^{-3}\) kg m-3 was chosen to reduce
+computational run time by preventing averaging of density profiles to
+the fourth decimal point.\}
+
+\hypertarget{water-quality}{%
+\subsection{Water quality}\label{water-quality}}
+
+The current implementation simulates dissolved oxygen, phytoplankton
+biomass, a nutrient concentration (simulating reactive phosphorus),
+labile particulate organic carbon (POC-l), labile dissolved organic
+carbon (DOC-l), refractory particulate organic carbon (POC-r), and
+refractory dissolved organic carbon (DOC-r) following a general equation
+of: \[
+A \frac{\partial C}{\partial t} + w \frac{\partial C}{\partial z} - \frac{\partial}{\partial z}(A K_z \frac{\partial C}{\partial z}) = P(C) - D(C)
+\] where \(w\) is a sinking rate, \(P(C)\) is a production term, and
+\(D(C)\) is a consumption (destruction) term.
+
+The main feedback of water quality to hydrodynamics is via the light
+extinction coefficient:
+
+\[
+k_d = k_{d, water} + k_{d, DOC} \overline{C_{DOC}} +  k_{d, POC} \overline{C_{POC}}
+\] where there are specific light extinction coefficients for background
+water, DOC and POC, \(k_{d, water}\), \(k_{d, DOC}\) and \(k_{d, POC}\),
+respectively, as well as the average sum of DOC and POC concentrations,
+\(\overline{C_{DOC}}\) and \(\overline{C_{POC}}\), respectively, from
+the surface to the mean depth of the lake.
+
+The water quality simulation is split into three modules dealing with
+(f) effects of external and internal boundaries, (g) internal production
+and conumption pathways, and (h) vertical transport.
+
+\hypertarget{f-boundary-fluxes}{%
+\subsubsection{f) Boundary fluxes}\label{f-boundary-fluxes}}
+
+Boundary fluxes include mass addition from external loadings,
+gas-exchange between the atmosphere and the water column, as well as
+sediment consumption fluxes.
+
+For mass fluxes, external loadings in m s-1 are added directly to the
+layer adjacent to the atmosphere-water interface and are multiplied with
+the time step.
+
+Surface gas exchange for dissolved oxygen was parameterized as \[
+F_{atm} = k_{p} (C_{DO, atm} - C_{DO}) A \Delta t
+\] where \(k_{p}\) is the piston velocity, and \(C_{DO, atm}\) is the
+saturated oxygen concentration. The piston velocity was calculated using
+the empirical gas exchange model following Vachon and Prairie (2013)
+based on lake area and wind velocity.
+
+Sediment oxygen demand for the consumption of the dissolved oxygen
+conentration \(C_{DO}\) (a sink for oxygen in the model) is quantified
+as \[
+SOD = (F_{DO}  + \frac{D_{diff}}{\delta} C_{DO} A ) \theta_{R}^{T-20} \Delta t
+\] where \(F_{DO}\) is an idealized area flux rate (g m-2 s-1),
+\(D_{diff}\) is the molecular oxygen diffusion coefficient (m2 s-1),
+\(\delta\) is the thickness of the sediment diffusive boundary layer (m,
+set to a constant value of 0.001 m ), and \(\theta\) is a temperature
+multiplier, here for respiration \(R\). \(D_{diff}\) was quantified as a
+function of water temperature following Han and Bartels (1996).
+
+The release of nutrients from the sediment, \(SNR\) (a source of
+nutrients in the model), was parameterized as a function depending on
+dissolved oxygen availability (using Michaelis-Menten kinetics) and
+temperature: \[
+SNR = (F_{NUTR} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
+\] where \(F_{NUTR}\) is an idealized area flux rate (g m-2 s-1), and
+\(k_{DO}\) is the half-saturation concentration of dissolved oxygen (g
+m-3).
+
+\begin{tcolorbox}[enhanced jigsaw, colframe=quarto-callout-note-color-frame, leftrule=.75mm, arc=.35mm, coltitle=black, titlerule=0mm, rightrule=.15mm, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, colbacktitle=quarto-callout-note-color!10!white, bottomtitle=1mm, toprule=.15mm, colback=white, left=2mm, opacitybacktitle=0.6, breakable, toptitle=1mm, bottomrule=.15mm, opacityback=0]
+
+In v0.1, SOD is quantified using Michaelis-Menten kinetics: \[
+SOD = (F_{DO} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
+\]
+
+Furter, GPP is quantified as a direct addition to oxygen, POC-l, and
+DOC-l at every time step using a forward Euler scheme:
+
+\[
+GPP = R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+\] where \(R_{molar}\) is the respective molar ratio to convert from
+carbon units into something else, \(p_1\) is the conversion from
+short-wave radiation to PAR (2.114), and \(I_P\) is a calibration
+coeffcient.
+
+\[
+M_{DO}^{t} = M_{DO}^{t-1} + \Delta t * GPP 
+\] \[
+M_{POC-l}^{t} = M_{POC-l}^{t-1} + 0.2 \Delta t * GPP 
+\] \[
+M_{DOC-l}^{t} = M_{DOC-l}^{t-1} + 0.8 \Delta t * GPP 
+\]
+
+\end{tcolorbox}
+
+\hypertarget{g-production-and-consumption}{%
+\subsubsection{g) Production and
+consumption}\label{g-production-and-consumption}}
+
+The model tracks the mass dynamics of dissolved oxygen, \(M_{DO}\),
+phytoplankton biomass, \(M_{phyto}\), nutrients, \(M_{nutr}\), labile
+particulate organic carbon, \(M_{POC-l}\), labile dissolved organic
+carbon, \(M_{DOC-l}\), refractory particulate organic carbon,
+\(M_{POR-r}\), and refractory dissolved organic carbon, \(M_{POC-l}\).
+The respective concentrations, \(C\) were quantified by dividing the
+masses with the voume.
+
+For production terms, gross primary production was quantified as \[
+GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+\] where \(R_{molar}\) is the respective molar ratio to convert from
+carbon units into something else, \(p_1\) is the conversion from
+short-wave radiation to PAR (2.114), and \(I_P\) is a calibration
+coeffcient.
+
+Respiration was quantified as depending on oxygen availability \[
+RSP = M_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
+\] with \(M_{i}\) either being nutrient, POC-l, DOC-l, POC-r, or DOC-r,
+and \(R_i\) is the respective respiration rate.
+
+Phytoplankton growth was quantified similar to GPP \[
+G = p_2 H p_1 \frac{C_{phyto}}{k_{phyto} + C_{phyto}} \theta_{GPP}^{T-20}
+\] with \(p_2\) being the growth rate of algae (d-1).
+
+The respective production and consumption terms for each variable are
+listed below:
+
+\[
+P_{DO} - D_{DO} = GPP - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r} + RSP_{nutr})
+\] \[
+P_{POC-l} - D_{POC-l} = 0.8 GPP - RSP_{POC-l} 
+\] \[
+P_{DOC-l} - D_{DOC-l} = (RSP_{POC-l} + 0.2 GPP) - RSP_{DOC-r} 
+\] \[
+P_{POC-r} - D_{POC-r} =  - RSP_{POC-r} 
+\] \[
+P_{DOC-r} - D_{DOC-r} = RSP_{POC-r} - RSP_{DOC-r} 
+\]
+
+\[
+P_{phyto} - D_{phyto} = G M_{phyto} - p_3 M_{phyto}  \theta_{GPP}^{T-20}
+\] with \(p_3\) as a grazing rate (d-1). \[
+P_{nutr} - D_{nutr} = p_3 p_4 M_{phyto} R_{molar}  \theta_{GPP}^{T-20} - RSP_{nutr}
+\] with \(p_4\) as the grazing ratio (hence, how much of the grazed
+material is converted from the grazer into nutrients, similar to an
+excretion rate).
+
+\begin{tcolorbox}[enhanced jigsaw, colframe=quarto-callout-note-color-frame, leftrule=.75mm, arc=.35mm, coltitle=black, titlerule=0mm, rightrule=.15mm, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Note}, colbacktitle=quarto-callout-note-color!10!white, bottomtitle=1mm, toprule=.15mm, colback=white, left=2mm, opacitybacktitle=0.6, breakable, toptitle=1mm, bottomrule=.15mm, opacityback=0]
+
+In v0.1, no production terms are used as GPP is included in the boundary
+flux module. Therefore, the following consumption terms are used: \[
+P_{DO} - D_{DO} = - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r})
+\] \[
+P_{POC-l} - D_{POC-l} = - RSP_{POC-l} 
+\] \[
+P_{DOC-l} - D_{DOC-l} = - RSP_{DOC-r} 
+\] \[
+P_{POC-r} - D_{POC-r} =  - RSP_{POC-r} 
+\] \[
+P_{DOC-r} - D_{DOC-r} =  - RSP_{DOC-r} 
+\]
+
+\end{tcolorbox}
+
+\hypertarget{numerical-implementation-1}{%
+\paragraph{Numerical implementation}\label{numerical-implementation-1}}
+
+For internal production and consumption fluxes, we applied the 2nd-order
+Modified Patankar-Runge-Kutta scheme, which is mass conservative and
+unconditionally positive (Burchard, Deleersnijder, and Meister (2003)):
+\[
+C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
+\] \[
+C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
+\] \[
+\text{with } i = 1, ..., I
+\] where \(i\) determines the current water quality constituent, \(P\)
+is a source term, and \(D\) is a sink term.
+
+\hypertarget{h-transport}{%
+\subsubsection{h) Transport}\label{h-transport}}
+
+For vertical transport, sinking and diffusion were parameterized for
+particulate and dissolved substances, respectively. For phytoplankton
+biomass, sinking and diffusion were both applied.
+
+Sinking was conceptualized as a sinking loss that was applied to every
+cell: \[
+SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
+\] with \(v_{i,settling}\) as a constant settling velocity. Similarily,
+a constant sedimentation rate, \(v_{sedimentation}\) was applied to the
+grid cell adjacent to the sediment-water interface to remove mass from
+the model over time.
+
+Turbulent diffusion was applied to the dissolved substances according to
+the previously described scheme in (c).
+
+\hypertarget{model-parameterization}{%
+\subsection{Model parameterization}\label{model-parameterization}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2000}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.4333}}
+  >{\centering\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2000}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Model parameter
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Symbol
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Default value
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+u & \(T\) & Initial temperature conditions (C) & - \\
+o2 & \(M_{DO}\) & Initial oxygen conditions (g) & - \\
+docr & \(M_{DOC-r}\) & Initial DOC-r conditions (g) & - \\
+docl & \(M_{DOC-l}\) & Initial DOC-l conditions (g) & - \\
+pocr & \(M_{POC-r}\) & Initial POC-r conditions (g) & - \\
+pocl & \(M_{POC-l}\) & Initial POC-l conditions (g) & - \\
+alg & \(M_{phyto}\) & Initial phytoplankton conditions (g) & - \\
+nutr & \(M_{nutr}\) & Initial nutrient conditions (g) & - \\
+startTime & - & Start time-date (s) & - \\
+endTime & - & End time-date (s) & - \\
+area & \(A\) & Depth-discrete areas (m2) & - \\
+volume & \(V\) & Depth-discrete volumes (m3) & - \\
+depth & \(z\) & Depth-discrete depths (m) & - \\
+zmax & - & Maximum lake depth & - \\
+nx & - & Maximum grid cell number & 50 \\
+dt & \(\Delta t\) & Time step (s) & 3600 \\
+dx & \(\Delta z\) & Space step (s) & 0.5 \\
+daily\_meteo & - & Meteorological driver data & - \\
+secview & - & Observed Secchi disk data (ignored since v0.1) & - \\
+phosphorus\_data & - & Observed phosphorus data (ignored in v0.1a) &
+- \\
+ice & - & Initial ice condition, TRUE or FALSE & FALSE \\
+Hi & \(h_{ice}\) & Initial ice thickness (m) & 0 \\
+Hs & - & Initial snow thickness (m) & 0 \\
+Hsi & - & Initial snow ice thickness (m) & 0 \\
+iceT & - & Initial moving average temperature for ice (C) & 6 \\
+supercooled & - & Initial amount of layers below freezing point & 0 \\
+diffusion\_method & - & Numerical method for \(K_z\) &
+``pacanowskiPhilander'' \\
+scheme & - & Numerical method for diffusion & ``implicit'' \\
+km & \(K_m\) & Background eddy diffusivity (m2s-1) & \(1.4 *10^{-7}\) \\
+k0 & - & Adjustable eddy diffusivity parameter (m2s-1) &
+\(1.0 *10^{-2}\) \\
+weight\_kz & - & Weighting of eddy diffusivity & 0.5 \\
+kd\_light & \(k_d\) & Light attenuation (m-1, ignored since v0.1) &
+0.6 \\
+densThresh & - & Density cutoff (kg m-3) & \(1.0 * 10^{-2}\) \\
+albedo & \(\alpha\) & Albedo & 0.1 \\
+eps & - & Emissivity of water & 0.97 \\
+emissivity & - & Emissivity of water (same as eps) & 0.97 \\
+sigma & - & Stefan-Boltzmann constant (W m-2K-4) & \(5.67 *10^{-8}\) \\
+sw\_factor & - & Multiplier for short-wave radiation & 1.0 \\
+wind\_factor & - & Multiplier for wind speed & 1.0 \\
+at\_factor & - & Multiplier for air temperature & 1.0 \\
+turb\_factor & - & Multiplier for turbulent heat fluxes & 1.0 \\
+p2 & - & Ignored since v0.1 & 1.0 \\
+B & - & Ignored since v0.1 & 0.61 \\
+g & \(g\) & Gravitational acceleration (m s-2) & 9.81 \\
+Cd & \(C_D\) & Momentum coefficient of wind & 0.0013 \\
+meltP & - & Multiplier for ice melting & 1.0 \\
+dt\_iceon\_avg & - & Ratio of ice forming temperature & 0.8 \\
+Hgeo & \(H_{geo}\) & Geothermal heat flux (W m-2) & 0.1 \\
+KEice & - & TKE multiplier for ice conditions (ignored since v0.1) &
+0 \\
+Ice\_min & - & Minimum ice thickness (m) & 0.1 \\
+pgdl\_mode & - & Additional data processing & ``on'' \\
+rho\_snow & \(\rho_{snow}\) & Initial snow density (kg m-3) & 250 \\
+p\_max & - & Multiplier for GPP (ignored since v0.1) & 1/86400 \\
+IP & \(I_P\) & Calibration coefficient for GPP &
+\(3.0 *10^{-6}\)/86400 \\
+theta\_npp & \(\theta_{GPP}\) & Arrhenius temperature multiplier &
+1.0 \\
+theta\_r & \(\theta_{R}\) & Arrhenius temperature multiplier & 1.08 \\
+conversion\_constant & - & Multiplier for GPP (ignored since v0.1) &
+\(1.0 *10^{-4}\) \\
+sed\_sink & \(F_{nutr}\) & Idealized nutrient source rate (g m-2 s-1) &
+0.01/86400 \\
+k\_half & \(k_{DO}\) & Half-saturation concentration (g m-3) & 0.5 \\
+resp\_docr & - & DOC-r respiration rate (s-1) & 0.008/86400 \\
+resp\_docl & - & DOC-l respiration rate (s-1) & 0.008/86400 \\
+resp\_pocr & - & POC-r respiration rate (s-1) & 0.08/86400 \\
+resp\_pocl & - & POC-l respiration rate (s-1) & 0.08/86400 \\
+grazing\_rate & \(p_3\) & Grazing rate of phytoplankton (s-1) &
+\(3.0 *10^{-3}\)/86400 \\
+pocr\_settling\_rate & \(v_{POC-r,settling}\) & POC-r settling rate (m
+s-1) & 0.2/86400 \\
+pocl\_settling\_rate & \(v_{POC-l,settling}\) & POC-l settling rate (m
+s-1) & 0.2/86400 \\
+algae\_settling\_rate & \(v_{phyto,settling}\) & Phytoplankton settling
+rate (m s-1) & \(1.0 *10^{-5}\)/86400 \\
+sediment\_rate & \(v_{sedimentation}\) & Sedimentation rate (m s-1) &
+0.5/86400 \\
+piston\_velocity & \(k_p\) & Piston velocity for gas exchange (m s-1,
+ignored since v0.1) & 1.0/86400 \\
+light\_water & \(k_{d, water}\) & Background light extinction (m-1) &
+0.125 \\
+light\_doc & \(k_{d, DOC}\) & DOC light extinction (m-1) & 0.02 \\
+light\_poc & \(k_{d, POC}\) & POC light extinction (m-1) & 0.7 \\
+mean\_depth & - & Mean depth of the lake (m) & \(\frac{\sum V}{A_s}\) \\
+W\_str & \(C_{shelter}\) & Manual wind-sheltering coefficient &
+``None'' \\
+tp\_inflow & - & Boundary condition of total phosphorus (m-1, ignored in
+v0.1a) & - \\
+pocr\_inflow & - & Mass influx of POC-r (m-1, ignored in v0.1) & - \\
+pocl\_inflow & - & Mass flux of POC-l (m-1, ignored in v0.1) & - \\
+f\_sod & \(F_{DO}\) & Idealized oxygen sink rate (g m-2 s-1, ignored in
+v0.1) & 0.1/86400 \\
+d\_thick & \(\delta\) & Thickness of diffusive boundary layer (m) &
+0.001 \\
+growth\_rate & \(p_2\) & Phytoplankton growth ratio (s-1) &
+\(1.0 *10^{-3}\)/86400 \\
+grazing\_ratio & \(p_4\) & Grazing ratio & 0.1 \\
+\end{longtable}
+
+\hypertarget{refs}{}
+\begin{CSLReferences}{1}{0}
+\leavevmode\vadjust pre{\hypertarget{ref-burchard_patankar_2003}{}}%
+Burchard, Hans, Eric Deleersnijder, and Andreas Meister. 2003. {``A
+High-Order Conservative Patankar-Type Discretisation for Stiff Systems
+of Production-Destruction Equations.''} \emph{Applied Numerical
+Mathematics.} 47 (1): 1--30.
+https://doi.org/\url{https://doi.org/10.1016/S0168-9274(03)00101-6}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-ford_thermal_1980}{}}%
+Ford, Dennis E, and Heinz G Stefan. 1980. {``Thermal Predictions Using
+Integral Energy Model.''} \emph{Journal of the Hydraulics Division} 106
+(1): 39--55. \url{https://doi.org/10.1061/JYCEAJ.0005358}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-goudsmit_application_2002_epsilon}{}}%
+Goudsmit, G.-H., H. Burchard, F. Peeters, and A. Wüest. 2002.
+{``Application of {k-\textepsilon} Turbulence Models to Enclosed Basins:
+{The} Role of Internal Seiches.''} \emph{Journal of Geophysical
+Research: Oceans} 107 (C12): 23-1-23-13.
+\url{https://doi.org/10.1029/2001JC000954}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-han_oxygen_1996}{}}%
+Han, Ping, and David M. Bartels. 1996. {``Temperature Dependence of
+Oxygen Diffusion in H2O and D2O.''} \emph{J. Phys. Chem.} 100 (13):
+5597--5602. https://doi.org/\url{https://doi.org/10.1021/jp952903y}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-henderson-sellers_new_1985}{}}%
+Henderson-Sellers, B. 1985. {``New Formulation of Eddy Diffusion
+Thermocline Models.''} \emph{Applied Mathematical Modelling} 9 (6):
+441--46. \url{https://doi.org/10.1016/0307-904X(85)90110-6}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-hondzo_lake_1993}{}}%
+Hondzo, Midhat, and Heinz G. Stefan. 1993. {``Lake {Water} {Temperature}
+{Simulation} {Model}.''} \emph{Journal of Hydraulic Engineering} 119
+(11): 1251--73.
+\url{https://doi.org/10.1061/(ASCE)0733-9429(1993)119:11(1251)}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-jabbari_nearshore_2023}{}}%
+Jabbari, Aidin, Reza Valipur, Josef D. Ackerman, and Yerubandi R. Rao.
+2023. {``{Nearshore-offshore exchanges by enhanced turbulent mixing
+along the north shore of Lake Ontario}.''} \emph{Journal of Great Lakes
+Research} 49 (3): 596--607.
+https://doi.org/\url{https://doi.org/10.1016/j.jglr.2023.03.010}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-lepparanta_review_1993}{}}%
+Leppäranta, Matti. 1993. {``A Review of Analytical Models of Sea‐ice
+Growth.''} \emph{Atmosphere-Ocean} 31 (1): 123--38.
+\url{https://doi.org/10.1080/07055900.1993.9649465}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-livingstone_annual_1989}{}}%
+Livingstone, David M., and Dieter M. Imboden. 1989. {``Annual Heat
+Balance and Equilibrium Temperature of {Lake} {Aegeri},
+{Switzerland}.''} \emph{Aquatic Sciences} 51 (4): 351--69.
+\url{https://doi.org/10.1007/BF00877177}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-pacanowski_paramterization_1981}{}}%
+Pacanowski, R. C., and S. G. H. Philander. 1981. {``{Parameterization of
+Vertical Mixing in Numerical Models of Tropical Oceans}.''}
+\emph{Journal of Physical Oceanography} 1: 1443--51.
+
+\leavevmode\vadjust pre{\hypertarget{ref-piccolroaz_deep_2013}{}}%
+Piccolroaz, Sebastiano, and Marco Toffolon. 2013. {``Deep Water Renewal
+in {Lake} {Baikal}: {A} Model for Long-Term Analyses: {Deep} {Water}
+{Renewal} in {Lake} {Baikal}.''} \emph{Journal of Geophysical Research:
+Oceans} 118 (12): 6717--33. \url{https://doi.org/10.1002/2013JC009029}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-press_numericalrecipes}{}}%
+Press, W. H., S. A. Teukolsky, W. T. Vetterling, and B. P. Flannery.
+2007. \emph{{Numerical} {Recipes:} {The} {Art} of {Scientific}
+{Computing}}. Cambridge University Press.
+
+\leavevmode\vadjust pre{\hypertarget{ref-saloranta_mylakemulti-year_2007}{}}%
+Saloranta, Tuomo M., and Tom Andersen. 2007. {``{MyLake}---{A}
+Multi-Year Lake Simulation Model Code Suitable for Uncertainty and
+Sensitivity Analysis Simulations.''} \emph{Ecological Modelling},
+Uncertainty in {Ecological} {Models}, 207 (1): 45--60.
+\url{https://doi.org/10.1016/j.ecolmodel.2007.03.018}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-vachon_ecosystem_2013}{}}%
+Vachon, Dominic, and Yves T. Prairie. 2013. {``The Ecosystem Size and
+Shape Dependence of Gas Transfer Velocity Versus Wind Speed
+Relationships in Lakes.''} Edited by Ralph Smith. \emph{Canadian Journal
+of Fisheries and Aquatic Sciences} 70 (12): 1757--64.
+\url{https://doi.org/10.1139/cjfas-2013-0241}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-verburg_persistent_2010}{}}%
+Verburg, Piet, and Jason P. Antenucci. 2010. {``Persistent Unstable
+Atmospheric Boundary Layer Enhances Sensible and Latent Heat Loss in a
+Tropical Great Lake: {Lake} {Tanganyika}.''} \emph{Journal of
+Geophysical Research} 115 (D11): D11109.
+\url{https://doi.org/10.1029/2009JD012839}.
+
+\end{CSLReferences}
+
+
+
+\end{document}

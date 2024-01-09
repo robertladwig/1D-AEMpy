@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Robert Ladwig">
-<meta name="dcterms.date" content="2023-07-31">
+<meta name="dcterms.date" content="2024-01-09">
 <meta name="keywords" content="keyword 1 aquatic ecosystem modeling">
 
 <title>1D-AEMpy v0.1a - Technical Documentation</title>
@@ -133,7 +133,7 @@ div.csl-indent {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 31, 2023</p>
+      <p class="date">January 9, 2024</p>
     </div>
   </div>
   
@@ -152,10 +152,25 @@ div.csl-indent {
 <section id="overview" class="level2">
 <h2 class="anchored" data-anchor-id="overview">Overview</h2>
 <p>This documentation describes the current version 0.1a of 1D-AEMpy, which includes hydrodynamic calculations coupled to a functional aquatic ecosystem model that explicitly simulates dissolved oxygen, phytoplankton biomass, a nutrient concentration (simulating reactive phosphorus), labile particulate organic carbon (POC-l), labile dissolved organic carbon (DOC-l), refractory particulate organic carbon (POC-r), and refractory dissolved organic carbon (DOC-r). The coupling between both models depends primarily on the light extinction coefficient (function of the sum of organic carbon concentrations) to the heat attenuation of the water column, as well as the derived eddy diffusivity governing the vertical diffusion of dissolved water quality variables.</p>
-<p>This version differs to v0.1 in one important aspect:</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Version 0.1a differs to v0.1 in a set of important aspects:</p>
 <ul>
-<li>v0.1 only simulates POC-l, DOC-l, POC-r, and DOC-r for water quality (meaning it essentially only captures main metabolism reactions)</li>
+<li>v0.1 only simulates POC-l, DOC-l, POC-r, and DOC-r for water quality (meaning it essentially only captures the main metabolism reactions)</li>
+<li>this means that in v0.1, GPP is a not dependent on any other state variable, but only on environmental conditions (light, nutrients)</li>
+<li>v0.1 uses a time-dependent boundary condition for the internal availability of nutrients, i.e., TP</li>
+<li>v0.1 does not include external mass fluxes, e.g., for POC-r and POC-l</li>
 </ul>
+</div>
+</div>
 <p>1D-AEMpy iteratively runs 8 modules to update the states of a set of model variables.</p>
 <div id="fig-best_model" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
@@ -257,6 +272,10 @@ PE = g \Delta \rho_w \frac{V_{mixed} V_z}{V_{mixed} + V_z} (z_{mixed} +\Delta z_
 <p>The current implementation simulates dissolved oxygen, phytoplankton biomass, a nutrient concentration (simulating reactive phosphorus), labile particulate organic carbon (POC-l), labile dissolved organic carbon (DOC-l), refractory particulate organic carbon (POC-r), and refractory dissolved organic carbon (DOC-r) following a general equation of: <span class="math display">
 A \frac{\partial C}{\partial t} + w \frac{\partial C}{\partial z} - \frac{\partial}{\partial z}(A K_z \frac{\partial C}{\partial z}) = P(C) - D(C)
 </span> where <span class="math inline">w</span> is a sinking rate, <span class="math inline">P(C)</span> is a production term, and <span class="math inline">D(C)</span> is a consumption (destruction) term.</p>
+<p>The main feedback of water quality to hydrodynamics is via the light extinction coefficient:</p>
+<p><span class="math display">
+k_d = k_{d, water} + k_{d, DOC} \overline{C_{DOC}} +  k_{d, POC} \overline{C_{POC}}
+</span> where there are specific light extinction coefficients for background water, DOC and POC, <span class="math inline">k_{d, water}</span>, <span class="math inline">k_{d, DOC}</span> and <span class="math inline">k_{d, POC}</span>, respectively, as well as the average sum of DOC and POC concentrations, <span class="math inline">\overline{C_{DOC}}</span> and <span class="math inline">\overline{C_{POC}}</span>, respectively, from the surface to the mean depth of the lake.</p>
 <p>The water quality simulation is split into three modules dealing with (f) effects of external and internal boundaries, (g) internal production and conumption pathways, and (h) vertical transport.</p>
 <section id="f-boundary-fluxes" class="level3">
 <h3 class="anchored" data-anchor-id="f-boundary-fluxes">f) Boundary fluxes</h3>
@@ -271,22 +290,42 @@ SOD = (F_{DO}  + \frac{D_{diff}}{\delta} C_{DO} A ) \theta_{R}^{T-20} \Delta t
 <p>The release of nutrients from the sediment, <span class="math inline">SNR</span> (a source of nutrients in the model), was parameterized as a function depending on dissolved oxygen availability (using Michaelis-Menten kinetics) and temperature: <span class="math display">
 SNR = (F_{NUTR} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
 </span> where <span class="math inline">F_{NUTR}</span> is an idealized area flux rate (g m<sup>-2</sup> s<sup>-1</sup>), and <span class="math inline">k_{DO}</span> is the half-saturation concentration of dissolved oxygen (g m<sup>-3</sup>).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In v0.1, SOD is quantified using Michaelis-Menten kinetics: <span class="math display">
+SOD = (F_{DO} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
+</span></p>
+<p>Furter, GPP is quantified as a direct addition to oxygen, POC-l, and DOC-l at every time step using a forward Euler scheme:</p>
+<p><span class="math display">
+GPP = R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+</span> where <span class="math inline">R_{molar}</span> is the respective molar ratio to convert from carbon units into something else, <span class="math inline">p_1</span> is the conversion from short-wave radiation to PAR (2.114), and <span class="math inline">I_P</span> is a calibration coeffcient.</p>
+<p><span class="math display">
+M_{DO}^{t} = M_{DO}^{t-1} + \Delta t * GPP
+</span> <span class="math display">
+M_{POC-l}^{t} = M_{POC-l}^{t-1} + 0.2 \Delta t * GPP
+</span> <span class="math display">
+M_{DOC-l}^{t} = M_{DOC-l}^{t-1} + 0.8 \Delta t * GPP
+</span></p>
+</div>
+</div>
 </section>
 <section id="g-production-and-consumption" class="level3">
 <h3 class="anchored" data-anchor-id="g-production-and-consumption">g) Production and consumption</h3>
-<p>The model tracks the mass dynamics of dissolved oxygen, <span class="math inline">M_{DO}</span>, phytoplankton biomass, <span class="math inline">M_{phyto}</span>, nutrients, <span class="math inline">M_{nutr}</span>, labile particulate organic carbon, <span class="math inline">M_{POC-l}</span>, labile dissolved organic carbon, <span class="math inline">M_{DOC-l}</span>, refractory particulate organic carbon, <span class="math inline">M_{POR-r}</span>, and refractory dissolved organic carbon, <span class="math inline">M_{POC-l}</span>. The respective concentrations, <span class="math inline">C</span> were quantified by dividng the masses with the voume. For internal production and consumption fluxes, we applied the 2nd-order Modified Patankar-Runge-Kutta scheme, which is mass conservative and unconditionally positive (<span class="citation" data-cites="burchard_patankar_2003">Burchard, Deleersnijder, and Meister (<a href="#ref-burchard_patankar_2003" role="doc-biblioref">2003</a>)</span>): <span class="math display">
-C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
-</span> <span class="math display">
-C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
-</span> <span class="math display">
-\text{with } i = 1, ..., I
-</span> where <span class="math inline">i</span> determines the current water quality constituent, <span class="math inline">P</span> is a source term, and <span class="math inline">D</span> is a sink term.</p>
+<p>The model tracks the mass dynamics of dissolved oxygen, <span class="math inline">M_{DO}</span>, phytoplankton biomass, <span class="math inline">M_{phyto}</span>, nutrients, <span class="math inline">M_{nutr}</span>, labile particulate organic carbon, <span class="math inline">M_{POC-l}</span>, labile dissolved organic carbon, <span class="math inline">M_{DOC-l}</span>, refractory particulate organic carbon, <span class="math inline">M_{POR-r}</span>, and refractory dissolved organic carbon, <span class="math inline">M_{POC-l}</span>. The respective concentrations, <span class="math inline">C</span> were quantified by dividing the masses with the voume.</p>
 <p>For production terms, gross primary production was quantified as <span class="math display">
-GPP = C_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
 </span> where <span class="math inline">R_{molar}</span> is the respective molar ratio to convert from carbon units into something else, <span class="math inline">p_1</span> is the conversion from short-wave radiation to PAR (2.114), and <span class="math inline">I_P</span> is a calibration coeffcient.</p>
 <p>Respiration was quantified as depending on oxygen availability <span class="math display">
-RSP = C_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
-</span> with <span class="math inline">C_{i}</span> either being nutrient, POC-l, DOC-l, POC-r, or DOC-r, and <span class="math inline">R_i</span> is the respective respiration rate.</p>
+RSP = M_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
+</span> with <span class="math inline">M_{i}</span> either being nutrient, POC-l, DOC-l, POC-r, or DOC-r, and <span class="math inline">R_i</span> is the respective respiration rate.</p>
 <p>Phytoplankton growth was quantified similar to GPP <span class="math display">
 G = p_2 H p_1 \frac{C_{phyto}}{k_{phyto} + C_{phyto}} \theta_{GPP}^{T-20}
 </span> with <span class="math inline">p_2</span> being the growth rate of algae (d<sup>-1</sup>).</p>
@@ -307,6 +346,39 @@ P_{phyto} - D_{phyto} = G M_{phyto} - p_3 M_{phyto}  \theta_{GPP}^{T-20}
 </span> with <span class="math inline">p_3</span> as a grazing rate (d<sup>-1</sup>). <span class="math display">
 P_{nutr} - D_{nutr} = p_3 p_4 M_{phyto} R_{molar}  \theta_{GPP}^{T-20} - RSP_{nutr}
 </span> with <span class="math inline">p_4</span> as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In v0.1, no production terms are used as GPP is included in the boundary flux module. Therefore, the following consumption terms are used: <span class="math display">
+P_{DO} - D_{DO} = - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r})
+</span> <span class="math display">
+P_{POC-l} - D_{POC-l} = - RSP_{POC-l}
+</span> <span class="math display">
+P_{DOC-l} - D_{DOC-l} = - RSP_{DOC-r}
+</span> <span class="math display">
+P_{POC-r} - D_{POC-r} =  - RSP_{POC-r}
+</span> <span class="math display">
+P_{DOC-r} - D_{DOC-r} =  - RSP_{DOC-r}
+</span></p>
+</div>
+</div>
+<section id="numerical-implementation-1" class="level4">
+<h4 class="anchored" data-anchor-id="numerical-implementation-1">Numerical implementation</h4>
+<p>For internal production and consumption fluxes, we applied the 2nd-order Modified Patankar-Runge-Kutta scheme, which is mass conservative and unconditionally positive (<span class="citation" data-cites="burchard_patankar_2003">Burchard, Deleersnijder, and Meister (<a href="#ref-burchard_patankar_2003" role="doc-biblioref">2003</a>)</span>): <span class="math display">
+C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
+</span> <span class="math display">
+C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
+</span> <span class="math display">
+\text{with } i = 1, ..., I
+</span> where <span class="math inline">i</span> determines the current water quality constituent, <span class="math inline">P</span> is a source term, and <span class="math inline">D</span> is a sink term.</p>
+</section>
 </section>
 <section id="h-transport" class="level3">
 <h3 class="anchored" data-anchor-id="h-transport">h) Transport</h3>
@@ -338,49 +410,49 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 <tr class="odd">
 <td>u</td>
 <td style="text-align: left;"><span class="math inline">T</span></td>
-<td style="text-align: right;">Initial temperature conditions</td>
+<td style="text-align: right;">Initial temperature conditions (C)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="even">
 <td>o2</td>
 <td style="text-align: left;"><span class="math inline">M_{DO}</span></td>
-<td style="text-align: right;">Initial oxygen conditions</td>
+<td style="text-align: right;">Initial oxygen conditions (g)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="odd">
 <td>docr</td>
 <td style="text-align: left;"><span class="math inline">M_{DOC-r}</span></td>
-<td style="text-align: right;">Initial DOC-r conditions</td>
+<td style="text-align: right;">Initial DOC-r conditions (g)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="even">
 <td>docl</td>
 <td style="text-align: left;"><span class="math inline">M_{DOC-l}</span></td>
-<td style="text-align: right;">Initial DOC-l conditions</td>
+<td style="text-align: right;">Initial DOC-l conditions (g)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="odd">
 <td>pocr</td>
 <td style="text-align: left;"><span class="math inline">M_{POC-r}</span></td>
-<td style="text-align: right;">Initial POC-r conditions</td>
+<td style="text-align: right;">Initial POC-r conditions (g)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="even">
 <td>pocl</td>
 <td style="text-align: left;"><span class="math inline">M_{POC-l}</span></td>
-<td style="text-align: right;">Initial POC-l conditions</td>
+<td style="text-align: right;">Initial POC-l conditions (g)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="odd">
 <td>alg</td>
 <td style="text-align: left;"><span class="math inline">M_{phyto}</span></td>
-<td style="text-align: right;">Initial phytoplankton conditions</td>
+<td style="text-align: right;">Initial phytoplankton conditions (g)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="even">
 <td>nutr</td>
 <td style="text-align: left;"><span class="math inline">M_{nutr}</span></td>
-<td style="text-align: right;">Initial nutrient conditions</td>
+<td style="text-align: right;">Initial nutrient conditions (g)</td>
 <td style="text-align: center;">-</td>
 </tr>
 <tr class="odd">
@@ -475,7 +547,7 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 </tr>
 <tr class="even">
 <td>Hsi</td>
-<td style="text-align: left;">1</td>
+<td style="text-align: left;">-</td>
 <td style="text-align: right;">Initial snow ice thickness (m)</td>
 <td style="text-align: center;">0</td>
 </tr>
@@ -507,13 +579,13 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 <td>km</td>
 <td style="text-align: left;"><span class="math inline">K_m</span></td>
 <td style="text-align: right;">Background eddy diffusivity (m<sup>2</sup>s<sup>-1</sup>)</td>
-<td style="text-align: center;"><span class="math inline">1.4 10^{-7}</span></td>
+<td style="text-align: center;"><span class="math inline">1.4 *10^{-7}</span></td>
 </tr>
 <tr class="even">
 <td>k0</td>
 <td style="text-align: left;">-</td>
 <td style="text-align: right;">Adjustable eddy diffusivity parameter (m<sup>2</sup>s<sup>-1</sup>)</td>
-<td style="text-align: center;"><span class="math inline">1.0 10^{-2}</span></td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-2}</span></td>
 </tr>
 <tr class="odd">
 <td>weight_kz</td>
@@ -531,7 +603,7 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 <td>densThresh</td>
 <td style="text-align: left;">-</td>
 <td style="text-align: right;">Density cutoff (kg m<sup>-3</sup>)</td>
-<td style="text-align: center;"><span class="math inline">1.0 10^{-2}</span></td>
+<td style="text-align: center;"><span class="math inline">1.0 * 10^{-2}</span></td>
 </tr>
 <tr class="even">
 <td>albedo</td>
@@ -555,7 +627,7 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 <td>sigma</td>
 <td style="text-align: left;">-</td>
 <td style="text-align: right;">Stefan-Boltzmann constant (W m<sup>-2</sup>K<sup>-4</sup>)</td>
-<td style="text-align: center;"><span class="math inline">5.67 10^{-8}</span></td>
+<td style="text-align: center;"><span class="math inline">5.67 *10^{-8}</span></td>
 </tr>
 <tr class="even">
 <td>sw_factor</td>
@@ -596,12 +668,12 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 <tr class="even">
 <td>g</td>
 <td style="text-align: left;"><span class="math inline">g</span></td>
-<td style="text-align: right;">Gravitational acceleration</td>
+<td style="text-align: right;">Gravitational acceleration (m s<sup>-2</sup>)</td>
 <td style="text-align: center;">9.81</td>
 </tr>
 <tr class="odd">
 <td>Cd</td>
-<td style="text-align: left;"><span class="math inline">C_d</span></td>
+<td style="text-align: left;"><span class="math inline">C_D</span></td>
 <td style="text-align: right;">Momentum coefficient of wind</td>
 <td style="text-align: center;">0.0013</td>
 </tr>
@@ -619,7 +691,7 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 </tr>
 <tr class="even">
 <td>Hgeo</td>
-<td style="text-align: left;">$H_{geo}</td>
+<td style="text-align: left;"><span class="math inline">H_{geo}</span></td>
 <td style="text-align: right;">Geothermal heat flux (W m<sup>-2</sup>)</td>
 <td style="text-align: center;">0.1</td>
 </tr>
@@ -657,7 +729,7 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 <td>IP</td>
 <td style="text-align: left;"><span class="math inline">I_P</span></td>
 <td style="text-align: right;">Calibration coefficient for GPP</td>
-<td style="text-align: center;"><span class="math inline">3.0 10^{-6}</span>/86400</td>
+<td style="text-align: center;"><span class="math inline">3.0 *10^{-6}</span>/86400</td>
 </tr>
 <tr class="odd">
 <td>theta_npp</td>
@@ -675,151 +747,151 @@ SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
 <td>conversion_constant</td>
 <td style="text-align: left;">-</td>
 <td style="text-align: right;">Multiplier for GPP (ignored since v0.1)</td>
-<td style="text-align: center;"><span class="math inline">1.0 10^{-4}</span></td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-4}</span></td>
 </tr>
 <tr class="even">
 <td>sed_sink</td>
 <td style="text-align: left;"><span class="math inline">F_{nutr}</span></td>
-<td style="text-align: right;">Idealized flux rate (g m<sup>-2</sup> s<sup>-1</sup>)</td>
+<td style="text-align: right;">Idealized nutrient source rate (g m<sup>-2</sup> s<sup>-1</sup>)</td>
 <td style="text-align: center;">0.01/86400</td>
 </tr>
 <tr class="odd">
 <td>k_half</td>
-<td style="text-align: left;">$k_{DO}</td>
+<td style="text-align: left;"><span class="math inline">k_{DO}</span></td>
 <td style="text-align: right;">Half-saturation concentration (g m<sup>-3</sup>)</td>
 <td style="text-align: center;">0.5</td>
 </tr>
 <tr class="even">
 <td>resp_docr</td>
-<td style="text-align: left;">12</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: center;">12</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">DOC-r respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.008/86400</td>
 </tr>
 <tr class="odd">
 <td>resp_docl</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">DOC-l respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.008/86400</td>
 </tr>
 <tr class="even">
 <td>resp_pocr</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: center;">1</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">POC-r respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.08/86400</td>
 </tr>
 <tr class="odd">
 <td>resp_pocl</td>
-<td style="text-align: left;">12</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: center;">12</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">POC-l respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.08/86400</td>
 </tr>
 <tr class="even">
 <td>grazing_rate</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;"><span class="math inline">p_3</span></td>
+<td style="text-align: right;">Grazing rate of phytoplankton (s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">3.0 *10^{-3}</span>/86400</td>
 </tr>
 <tr class="odd">
 <td>pocr_settling_rate</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: center;">1</td>
+<td style="text-align: left;"><span class="math inline">v_{POC-r,settling}</span></td>
+<td style="text-align: right;">POC-r settling rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.2/86400</td>
 </tr>
 <tr class="even">
 <td>pocl_settling_rate</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;"><span class="math inline">v_{POC-l,settling}</span></td>
+<td style="text-align: right;">POC-l settling rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.2/86400</td>
 </tr>
 <tr class="odd">
 <td>algae_settling_rate</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: center;">1</td>
+<td style="text-align: left;"><span class="math inline">v_{phyto,settling}</span></td>
+<td style="text-align: right;">Phytoplankton settling rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-5}</span>/86400</td>
 </tr>
 <tr class="even">
 <td>sediment_rate</td>
-<td style="text-align: left;">12</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: center;">12</td>
+<td style="text-align: left;"><span class="math inline">v_{sedimentation}</span></td>
+<td style="text-align: right;">Sedimentation rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.5/86400</td>
 </tr>
 <tr class="odd">
 <td>piston_velocity</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;"><span class="math inline">k_p</span></td>
+<td style="text-align: right;">Piston velocity for gas exchange (m s<sup>-1</sup>, ignored since v0.1)</td>
+<td style="text-align: center;">1.0/86400</td>
 </tr>
 <tr class="even">
 <td>light_water</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: center;">1</td>
+<td style="text-align: left;"><span class="math inline">k_{d, water}</span></td>
+<td style="text-align: right;">Background light extinction (m<sup>-1</sup>)</td>
+<td style="text-align: center;">0.125</td>
 </tr>
 <tr class="odd">
 <td>light_doc</td>
-<td style="text-align: left;">12</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: center;">12</td>
+<td style="text-align: left;"><span class="math inline">k_{d, DOC}</span></td>
+<td style="text-align: right;">DOC light extinction (m<sup>-1</sup>)</td>
+<td style="text-align: center;">0.02</td>
 </tr>
 <tr class="even">
 <td>light_poc</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;"><span class="math inline">k_{d, POC}</span></td>
+<td style="text-align: right;">POC light extinction (m<sup>-1</sup>)</td>
+<td style="text-align: center;">0.7</td>
 </tr>
 <tr class="odd">
 <td>mean_depth</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: center;">1</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Mean depth of the lake (m)</td>
+<td style="text-align: center;"><span class="math inline">\frac{\sum V}{A_s}</span></td>
 </tr>
 <tr class="even">
 <td>W_str</td>
-<td style="text-align: left;">12</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: center;">12</td>
+<td style="text-align: left;"><span class="math inline">C_{shelter}</span></td>
+<td style="text-align: right;">Manual wind-sheltering coefficient</td>
+<td style="text-align: center;">“None”</td>
 </tr>
 <tr class="odd">
 <td>tp_inflow</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Boundary condition of total phosphorus (m<sup>-1</sup>, ignored in v0.1a)</td>
+<td style="text-align: center;">-</td>
 </tr>
 <tr class="even">
 <td>pocr_inflow</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: center;">1</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Mass influx of POC-r (m<sup>-1</sup>, ignored in v0.1)</td>
+<td style="text-align: center;">-</td>
 </tr>
 <tr class="odd">
 <td>pocl_inflow</td>
-<td style="text-align: left;">12</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: center;">12</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Mass flux of POC-l (m<sup>-1</sup>, ignored in v0.1)</td>
+<td style="text-align: center;">-</td>
 </tr>
 <tr class="even">
 <td>f_sod</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;"><span class="math inline">F_{DO}</span></td>
+<td style="text-align: right;">Idealized oxygen sink rate (g m<sup>-2</sup> s<sup>-1</sup>, ignored in v0.1)</td>
+<td style="text-align: center;">0.1/86400</td>
 </tr>
 <tr class="odd">
 <td>d_thick</td>
-<td style="text-align: left;">1</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: center;">1</td>
+<td style="text-align: left;"><span class="math inline">\delta</span></td>
+<td style="text-align: right;">Thickness of diffusive boundary layer (m)</td>
+<td style="text-align: center;">0.001</td>
 </tr>
 <tr class="even">
 <td>growth_rate</td>
-<td style="text-align: left;">12</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: center;">12</td>
+<td style="text-align: left;"><span class="math inline">p_2</span></td>
+<td style="text-align: right;">Phytoplankton growth ratio (s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-3}</span>/86400</td>
 </tr>
 <tr class="odd">
 <td>grazing_ratio</td>
-<td style="text-align: left;">123</td>
-<td style="text-align: right;">123</td>
-<td style="text-align: center;">123</td>
+<td style="text-align: left;"><span class="math inline">p_4</span></td>
+<td style="text-align: right;">Grazing ratio</td>
+<td style="text-align: center;">0.1</td>
 </tr>
 </tbody>
 </table>
