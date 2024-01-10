@@ -1529,7 +1529,7 @@ def mixing_module_minlake(
     docl =docl*volume
     docr =docr*volume
     pocl =pocl*volume
-
+    pocr = pocr*volume 
     alg =alg*volume
     nutr = nutr*volume
 
@@ -2571,7 +2571,7 @@ def run_wq_model(
     depth_limit = mean_depth
     # depth_limit = 1
     
-    sum_doc = (docr[depth < depth_limit] + docl[depth < depth_limit] )/volume[depth < depth_limit] 
+    sum_doc = (docr[depth < depth_limit] + docl[depth < depth_limit] + alg[depth < depth_limit] +nutr[depth < depth_limit] )/volume[depth < depth_limit] 
     sum_poc = (pocr[depth < depth_limit]  + pocl[depth < depth_limit] )/volume[depth < depth_limit] 
     kd_light = light_water +  light_doc * np.mean(sum_doc) + light_poc * np.mean(sum_poc)
     
@@ -2584,6 +2584,8 @@ def run_wq_model(
     docl_initial[:, idn] = docl
     pocr_initial[:, idn] = pocr
     pocl_initial[:, idn] = pocl
+    alg_initial[:, idn] = pocr
+    nutr_initial[:, idn] = pocl
     
 
     ## (1) HEATING
