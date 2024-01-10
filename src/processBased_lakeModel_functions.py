@@ -1529,9 +1529,10 @@ def mixing_module_minlake(
     docl =docl*volume
     docr =docr*volume
     pocl =pocl*volume
-    pocr = pocr*volume
+
     alg =alg*volume
     nutr = nutr*volume
+
     
     energy_ratio = KE
     
