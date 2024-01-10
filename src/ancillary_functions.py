@@ -86,7 +86,9 @@ def calc_cc(date, airt,  swr, lat, lon, elev,  relh = None, dewt = None,daily = 
 
     df.loc[df.ccsim > 1, "ccsim"] = 1
     ccsim_fillvals = tuple(df.ccsim.dropna().values[[0,-1]])
-    df['dt'] = (df['DateTime'] - df['DateTime'][0]).astype('timedelta64[s]') + 1
+    #df['dt'] = (df['DateTime'] - df['DateTime'][0]).astype('timedelta64[s]') + 1
+    time_diff = (df['DateTime'] - df['DateTime'][0]).astype('timedelta64[s]')
+    df['dt'] =time_diff.dt.total_seconds() + 1
     df_notNA = df.dropna(subset=['ccsim'])
     ccsim_fun = interp1d(df_notNA.dt.values, df_notNA.ccsim.values, kind = "linear", fill_value=ccsim_fillvals, bounds_error=False)
     ccsim = ccsim_fun(df.dt.values)

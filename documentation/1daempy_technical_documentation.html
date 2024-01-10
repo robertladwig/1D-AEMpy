@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Robert Ladwig">
+<meta name="dcterms.date" content="2024-01-09">
+<meta name="keywords" content="keyword 1 aquatic ecosystem modeling">
+
+<title>1D-AEMpy v0.1a - Technical Documentation</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="1daempy_technical_documentation_files/libs/clipboard/clipboard.min.js"></script>
+<script src="1daempy_technical_documentation_files/libs/quarto-html/quarto.js"></script>
+<script src="1daempy_technical_documentation_files/libs/quarto-html/popper.min.js"></script>
+<script src="1daempy_technical_documentation_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="1daempy_technical_documentation_files/libs/quarto-html/anchor.min.js"></script>
+<link href="1daempy_technical_documentation_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="1daempy_technical_documentation_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="1daempy_technical_documentation_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="1daempy_technical_documentation_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="1daempy_technical_documentation_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css">
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#hydrodynamics" id="toc-hydrodynamics" class="nav-link" data-scroll-target="#hydrodynamics">Hydrodynamics</a>
+  <ul class="collapse">
+  <li><a href="#a-heat-generation-from-boundary-conditions" id="toc-a-heat-generation-from-boundary-conditions" class="nav-link" data-scroll-target="#a-heat-generation-from-boundary-conditions">a) Heat generation from boundary conditions</a></li>
+  <li><a href="#b-ice-snow-and-snow-ice-formation" id="toc-b-ice-snow-and-snow-ice-formation" class="nav-link" data-scroll-target="#b-ice-snow-and-snow-ice-formation">b) Ice, snow, and snow ice formation</a></li>
+  <li><a href="#c-vertical-turbulent-diffusion" id="toc-c-vertical-turbulent-diffusion" class="nav-link" data-scroll-target="#c-vertical-turbulent-diffusion">c) Vertical (turbulent) diffusion</a></li>
+  <li><a href="#d-wind-induced-mixing" id="toc-d-wind-induced-mixing" class="nav-link" data-scroll-target="#d-wind-induced-mixing">d) Wind-induced mixing</a></li>
+  <li><a href="#e-convective-overturn" id="toc-e-convective-overturn" class="nav-link" data-scroll-target="#e-convective-overturn">e) Convective overturn</a></li>
+  </ul></li>
+  <li><a href="#water-quality" id="toc-water-quality" class="nav-link" data-scroll-target="#water-quality">Water quality</a>
+  <ul class="collapse">
+  <li><a href="#f-boundary-fluxes" id="toc-f-boundary-fluxes" class="nav-link" data-scroll-target="#f-boundary-fluxes">f) Boundary fluxes</a></li>
+  <li><a href="#g-production-and-consumption" id="toc-g-production-and-consumption" class="nav-link" data-scroll-target="#g-production-and-consumption">g) Production and consumption</a></li>
+  <li><a href="#h-transport" id="toc-h-transport" class="nav-link" data-scroll-target="#h-transport">h) Transport</a></li>
+  </ul></li>
+  <li><a href="#model-parameterization" id="toc-model-parameterization" class="nav-link" data-scroll-target="#model-parameterization">Model parameterization</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">1D-AEMpy v0.1a - Technical Documentation</h1>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Author</div>
+  <div class="quarto-title-meta-heading">Affiliations</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author">Robert Ladwig <a href="https://orcid.org/0000-0001-8443-1999" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a></p>
+  </div>
+    <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            Department of Ecoscience, Aarhus University
+          </p>
+        <p class="affiliation">
+            Center for Limnology, University of Wisconsin-Madison
+          </p>
+      </div>
+    </div>
+
+<div class="quarto-title-meta">
+
+      
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 9, 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+<div>
+  <div class="abstract">
+    <div class="abstract-title">Abstract</div>
+    <p>Technical documentation of the numerical implementation of the one-dimensinal Aquatic Ecosystem Model in Pyton (1D-AEMpy). This documentation describes the different modules that govern hydrodynamic and water quality calculations to simulate the vertical dynamics of water temperature, dissolved oxygen, phytoplankton biomass, nutrient concentration, and aspects of organic carbon.</p>
+  </div>
+</div>
+
+</header>
+
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>This documentation describes the current version 0.1a of 1D-AEMpy, which includes hydrodynamic calculations coupled to a functional aquatic ecosystem model that explicitly simulates dissolved oxygen, phytoplankton biomass, a nutrient concentration (simulating reactive phosphorus), labile particulate organic carbon (POC-l), labile dissolved organic carbon (DOC-l), refractory particulate organic carbon (POC-r), and refractory dissolved organic carbon (DOC-r). The coupling between both models depends primarily on the light extinction coefficient (function of the sum of organic carbon concentrations) to the heat attenuation of the water column, as well as the derived eddy diffusivity governing the vertical diffusion of dissolved water quality variables.</p>
+<div id="fig-best_model" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="figures/conceptual_diagram.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Figure&nbsp;1: Conceptual diagram of 1D-AEMpy.</figcaption>
+</figure>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Version 0.1a differs to v0.1 in a set of important aspects:</p>
+<ul>
+<li>v0.1 only simulates POC-l, DOC-l, POC-r, and DOC-r for water quality (meaning it essentially only captures the main metabolism reactions)</li>
+<li>this means that in v0.1, GPP is a not dependent on any other state variable, but only on environmental conditions (light, nutrients)</li>
+<li>v0.1 uses a time-dependent boundary condition for the internal availability of nutrients, i.e., TP</li>
+<li>v0.1 does not include external mass fluxes, e.g., for POC-r and POC-l</li>
+</ul>
+</div>
+</div>
+<p>1D-AEMpy iteratively runs 8 modules to update the states of a set of model variables.</p>
+<div id="fig-best_model" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="figures/conceptual_model.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Figure&nbsp;2: Modularization of 1D-AEMpy.</figcaption>
+</figure>
+</div>
+</section>
+<section id="hydrodynamics" class="level2">
+<h2 class="anchored" data-anchor-id="hydrodynamics">Hydrodynamics</h2>
+<p>A one-dimensional hydrodynamic lake model was developed to simulate the temperature, heat flux and stratification dynamics in a lake. The algorithms are based on the eddy diffusion approach (<span class="citation" data-cites="henderson-sellers_new_1985">Henderson-Sellers (<a href="#ref-henderson-sellers_new_1985" role="doc-biblioref">1985</a>)</span>) and the MyLake (<span class="citation" data-cites="saloranta_mylakemulti-year_2007">Saloranta and Andersen (<a href="#ref-saloranta_mylakemulti-year_2007" role="doc-biblioref">2007</a>)</span>) model. Using the one-dimensional temperature diffusion equation for heat transport, we neglected any inflows and outflows, mass losses due to evaporation and water level changes: <span class="math display">
+    \frac{\partial h}{\partial t}=0
+</span></p>
+<p><span class="math display">
+    A \frac{\partial T}{\partial t}=\frac{\partial}{\partial z}(A K_z \frac{\partial T}{\partial z}) + \frac{1}{{\rho_w c_p}}\frac{\partial H(z)}{\partial z}  + \frac{\partial A}{\partial z}\frac{H_{geo}}{\rho_w c_p}
+</span></p>
+<p>where <span class="math inline">h</span> is the water level (m), <span class="math inline">A</span> is lake area (m<sup>2</sup>), <span class="math inline">T</span> is water temperature (C), <span class="math inline">t</span> is time (s), <span class="math inline">K_z</span> is the vertical diffusion coefficient m<sup>2</sup> s<sup>-1</sup>, <span class="math inline">H</span> is internal heat generation due to incoming solar radiation (W m<sup>2</sup>), <span class="math inline">\rho_w</span> is water density (kg m<sup>-3</sup>), <span class="math inline">c_p</span> is specific heat content of water (J kg<sup>-1</sup> C<sup>-1</sup>), and <span class="math inline">H_{geo}</span> is internal geothermal heat generation (W m<sup>-2</sup>) (which was set to 0.1 W m<sup>-2</sup> (<span class="citation" data-cites="goudsmit_application_2002_epsilon">Goudsmit et al. (<a href="#ref-goudsmit_application_2002_epsilon" role="doc-biblioref">2002</a>)</span>)). Internal heat generation is implemented based on Beer-Lambert law for attenuation of short-wave radiation as a function of a constant light attenuation coefficient: <span class="math display">
+    H(z)=\left(1-\alpha\right)I_s \text{exp}\left(-k_d z\right)
+</span> where <span class="math inline">\alpha</span> is the albedo (<span class="math inline">-</span>), <span class="math inline">I_s</span> is total incident short-wave radiation (W m<sup>-2</sup>), and <span class="math inline">k_d</span> is a light attenuation coefficient (m<sup>-1</sup>). For the boundary conditions, we assume a Neumann type for the temperature diffusion equation at the atmosphere-surface boundary, and a zero-flux Neumann type at the bottom: <span class="math display">
+    \rho_w c_p(K_z \frac{\partial T}{\partial z})_{surface}=H_{net}
+</span> <span class="math display">
+    K_z (\frac{\partial T}{\partial z})_{bottom}=0
+</span> where <span class="math inline">H_{net}</span> is the net heat flux exchange between atmosphere and water column (W m<sup>-2</sup>). The neat heat flux exchange consisted of four terms: <span class="math display">
+    H_{net}=H_{lw}+H_{lwr}+H_v+H_c
+</span> where <span class="math inline">H_{lw}</span> is the incoming long-wave radiation (W m<sup>-2</sup>), <span class="math inline">H_{lwr}</span> is emitted radiation from the water column (W m<sup>-2</sup>), <span class="math inline">H_v</span> is the latent heat flux (W m<sup>-2</sup>), and <span class="math inline">H_c</span> is the sensible heat flux (W m<sup>-2</sup>). Incoming and outgoing long-wave heat fluxes were derived using the formulations from <span class="citation" data-cites="livingstone_annual_1989">Livingstone and Imboden (<a href="#ref-livingstone_annual_1989" role="doc-biblioref">1989</a>)</span> and <span class="citation" data-cites="goudsmit_application_2002_epsilon">Goudsmit et al. (<a href="#ref-goudsmit_application_2002_epsilon" role="doc-biblioref">2002</a>)</span>. The latent and sensible heat fluxes were calculated taking into account atmospheric stability using the algorithm by <span class="citation" data-cites="verburg_persistent_2010">Verburg and Antenucci (<a href="#ref-verburg_persistent_2010" role="doc-biblioref">2010</a>)</span>.</p>
+<p>The calculation of a temperature profile at every time step is modularized into four steps: (a) heat generation from boundary conditions, (b) ice and snow formation, (c) vertical diffusion, (d) wind-induced mixing, and (e) convective overturn. The one-dimensional temperature diffusion equation was discretized using the implicit Crank-Nicolson scheme (<span class="citation" data-cites="press_numericalrecipes">Press et al. (<a href="#ref-press_numericalrecipes" role="doc-biblioref">2007</a>)</span>), which being second-order in both space and time allows the modeling time step to be dynamic without numerical stability issues. The model was implemented in Python 3.7 with a default time step of <span class="math inline">\Delta t = 3,600</span> s and a default spatial discretization of <span class="math inline">\Delta z = 0.5</span> m.</p>
+<section id="a-heat-generation-from-boundary-conditions" class="level3">
+<h3 class="anchored" data-anchor-id="a-heat-generation-from-boundary-conditions">a) Heat generation from boundary conditions</h3>
+<p>In the first step, the heat fluxes <span class="math inline">H</span>, <span class="math inline">H_{geo}</span> and <span class="math inline">H_{net}</span> are applied over the vertical water column.</p>
+</section>
+<section id="b-ice-snow-and-snow-ice-formation" class="level3">
+<h3 class="anchored" data-anchor-id="b-ice-snow-and-snow-ice-formation">b) Ice, snow, and snow ice formation</h3>
+<p>In the second step, the ice and snow cover algorithm from MyLake @(saloranta_mylakemulti-year_2007) was applied to the model. Whenever water temperatures were equal or below the freezing point of water (set to 0 C), ice formation was triggered. All layers with water temperatures below the freezing point were set to 0 C, and the heat deficit from atmospheric heat exchange was converted into latent heat of ice formation. Stefan’s law was applied to calculate ice thickness when air temperatures were below freezing point triggering ice formation (e.g., <span class="citation" data-cites="lepparanta_review_1993">Leppäranta (<a href="#ref-lepparanta_review_1993" role="doc-biblioref">1993</a>)</span>): <span class="math display">
+     h_{ice}=\sqrt{h_{ice}^2+\frac{2 \kappa_{ice}}{\rho_{ice}L}(T_f-T_{ice})\Delta t}
+</span> where <span class="math inline">h_{ice}</span> is ice thickness (<span class="math inline">m</span>), <span class="math inline">\kappa_{ice}</span> is thermal conductivity of ice (<span class="math inline">W</span> <span class="math inline">K^{-1}</span> <span class="math inline">m^{-1}</span>), <span class="math inline">\rho_{ice}</span> is ice density (<span class="math inline">kg</span> <span class="math inline">m^{-3}</span>), <span class="math inline">L</span> is latent heat of freezing (<span class="math inline">J</span> <span class="math inline">kg^{-1}</span>), <span class="math inline">T_f</span> is water temperature at freezing point (<span class="math inline">T_f =</span> 0 <span class="math inline">^\circ C</span>), and <span class="math inline">T_{ice}</span> is the temperature of the ice surface. The formation of a snow layer on top of the ice layer depended on the amount of precipitation. Further, whenever the weight of snow exceeded the buoyancy capacity of the ice layer, enough water to offset the exceedance forms a snow ice layer with the same properties as ice. When air temperatures were above the freezing point, ice and snow growth ceased, and snow and ice melting were initiated with ice melt requiring no snow to exist. Here, total energy of melting was taken from the total heat flux <span class="math inline">H_{net}</span>. Once the ice layer has disappeared, the default model routine continued. For more details, we refer the reader to <span class="citation" data-cites="saloranta_mylakemulti-year_2007">Saloranta and Andersen (<a href="#ref-saloranta_mylakemulti-year_2007" role="doc-biblioref">2007</a>)</span>.</p>
+</section>
+<section id="c-vertical-turbulent-diffusion" class="level3">
+<h3 class="anchored" data-anchor-id="c-vertical-turbulent-diffusion">c) Vertical (turbulent) diffusion</h3>
+<p>In the third step, vertical turbulent diffusion between adjacent grid cells was calculated. Here, we applied a centered difference approximation for temperature at the next time step. The vertical turbulent diffusion coefficients, <span class="math inline">K_t</span>, were calculated using an empirical relationship depending on the Richardson number: <span class="math display">
+    K_z = \frac{K_0}{(1+5 Ri(z))^2} + K_m
+</span> where <span class="math inline">K_0</span> is an adjustable parameter (set to <span class="math inline">10^{-2}</span> m s<sup>-2</sup>) <span class="math inline">R_i</span> is the Richardson number, and <span class="math inline">K_m</span> is the background eddy diffusivity (<span class="citation" data-cites="pacanowski_paramterization_1981">Pacanowski and Philander (<a href="#ref-pacanowski_paramterization_1981" role="doc-biblioref">1981</a>)</span>, <span class="citation" data-cites="jabbari_nearshore_2023">Jabbari et al. (<a href="#ref-jabbari_nearshore_2023" role="doc-biblioref">2023</a>)</span>). The Richardson number was quantified as: <span class="math display">
+    R_i= \frac{-1 + [1+ 40 N^2 k^2 z^2 / \left({w^*}^2 \text{exp}(-2 k^* z)\right)]^{(1/2)}}{20}
+</span> with <span class="math inline">k</span> as the Karman constant (<span class="math inline">k=0.4</span>), and the squared buoyancy frequency, <span class="math inline">N^2=\frac{g}{\rho_w}\frac{\partial \rho_w}{\partial z}</span> (<span class="math inline">s^{-2}</span>) (<span class="citation" data-cites="henderson-sellers_new_1985">Henderson-Sellers (<a href="#ref-henderson-sellers_new_1985" role="doc-biblioref">1985</a>)</span>). Friction velocity <span class="math inline">w^*</span> was calculated as: <span class="math display">
+    w^*= C_D U_2
+</span> where the drag coefficient <span class="math inline">C_D</span> was set to <span class="math inline">1.3</span> x <span class="math inline">10^{-3}</span>, and <span class="math inline">U_2</span> is the wind speed at 2 m above surface (m s<sup>-1</sup>). All values of <span class="math inline">N^2</span> less than <span class="math inline">7.0</span> x <span class="math inline">10^{-5}</span> s<sup>-2</sup> were set to <span class="math inline">7.0</span> x <span class="math inline">10^{-5}</span> s<sup>-2</sup> (<span class="citation" data-cites="hondzo_lake_1993">Hondzo and Stefan (<a href="#ref-hondzo_lake_1993" role="doc-biblioref">1993</a>)</span>).</p>
+<p>To replicate a lag in the mixing dynamics, we set the values of <span class="math inline">K_z</span> to the average between the current profile and the one from the previous time step (<span class="citation" data-cites="piccolroaz_deep_2013">Piccolroaz and Toffolon (<a href="#ref-piccolroaz_deep_2013" role="doc-biblioref">2013</a>)</span>).</p>
+<section id="numerical-implementation" class="level4">
+<h4 class="anchored" data-anchor-id="numerical-implementation">Numerical implementation</h4>
+<p>The implicit Crnak-Nicolson scheme, whichis second-order derivative in space and time, was applied to solve the one-dimensional temperature transport equation for the diffusive transport. Here, we average the response in space between the current and the next time step: <span class="math display">
+A \frac{\partial T}{\partial t}=A K_z \frac{\partial T}{\partial z}
+</span> <span class="math display">
+A \frac{T_i^{n+1} - T_i^n}{\Delta t} = \frac{1}{2} [A K_z \frac{T_{i+1}^{n+1} - 2 T_i^{n+1} + T_{i-1}^{n+1}}{\Delta z^2} +  A K_z \frac{T_{i+1}^{n} - 2 T_i^n + T_{i-1}^n}{\Delta z^2}]
+</span> Here, we can apply <span class="math inline">\alpha = A K_z \frac{\Delta t}{\Delta z^2}</span>, transforming the equation to: <span class="math display">
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} =\frac{\alpha}{2} T_{i+1}^{n} + (A-\alpha)T_{i}^{n}+ \frac{\alpha}{2}T_{i-1}^{n}
+</span> <span class="math display">
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} = R_i^n
+</span> where the right-hand side quantity <span class="math inline">R_i^n</span> is known at the beginning of each time step.</p>
+<p>In the current version, we asusme static Dirichlet boundary conditions for the diffusive transport, which transforms the equation into a matrix (given here for an example for 5 times 5 rows and columns): <span class="math display">
+\begin{bmatrix}
+1 &amp; 0 &amp; 0 &amp; 0 &amp;0 \\
+- \frac{\alpha}{2} &amp; 1+\alpha &amp; - \frac{\alpha}{2} &amp; 0 &amp; 0 \\
+0 &amp;- \frac{\alpha}{2} &amp; 1+\alpha &amp; - \frac{\alpha}{2} &amp; 0  \\
+0 &amp; 0 &amp;- \frac{\alpha}{2} &amp; 1+\alpha &amp; - \frac{\alpha}{2} \\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; 1
+\end{bmatrix}
+\begin{bmatrix} T_1^{n+1} \\  
+T_2^{n+1} \\
+T_3^{n+1} \\
+  T_4^{n+1} \\
+   T_5^{n+1}
+\end{bmatrix} =
+\begin{bmatrix} T_1^n \\  
+R_2^n \\
+R_3^n \\
+  R_4^n \\
+   T_5^n
+\end{bmatrix}
+</span></p>
+</section>
+</section>
+<section id="d-wind-induced-mixing" class="level3">
+<h3 class="anchored" data-anchor-id="d-wind-induced-mixing">d) Wind-induced mixing</h3>
+<p>To ensure an adequate representation of the effects of wind-induced mixing, which was not incorporated into the turbulent diffusive transport step, an additional step based on the concept of integral energy was applied following the algorithms by <span class="citation" data-cites="saloranta_mylakemulti-year_2007">Saloranta and Andersen (<a href="#ref-saloranta_mylakemulti-year_2007" role="doc-biblioref">2007</a>)</span> and <span class="citation" data-cites="ford_thermal_1980">Ford and Stefan (<a href="#ref-ford_thermal_1980" role="doc-biblioref">1980</a>)</span>. Generally, the avaible external turbulent kinetic energy (TKE) is compared to the potential energy of the water column that is needed to lift up denser water from below a mixed layer into a newly formed mixed layer until the external TKE is depleted. TKE was quantified as: <span class="math display">
+TKE = C_{shelter} A_s \sqrt{\frac{\tau^3}{\rho_w}} \Delta t
+</span> where <span class="math inline">C_{shelter}</span> is a wind-sheltering coefficient, and <span class="math inline">\tau</span> is the wind shear stress. <span class="math inline">C_{shelter}</span> was parameterized based on <span class="citation" data-cites="hondzo_lake_1993">Hondzo and Stefan (<a href="#ref-hondzo_lake_1993" role="doc-biblioref">1993</a>)</span>: <span class="math display">
+C_{shelter} = 1.0 - exp(-0.3 A_s)
+</span> TKE is compared with the available potential energy (PE) in the water column: <span class="math display">
+PE = g \Delta \rho_w \frac{V_{mixed} V_z}{V_{mixed} + V_z} (z_{mixed} +\Delta z_{M, z} - z_{M, mixed})
+</span> where <span class="math inline">\Delta \rho_w</span> is the density difference between layer <span class="math inline">z</span> and the mixed-layer (epilimnion) density, <span class="math inline">V_{mixed}</span> is the mixed-layer volume, and <span class="math inline">\Delta z_{M, z}</span> is the distance from layer <span class="math inline">z</span>’s center of mass, <span class="math inline">z_M</span>, to the bottom of the mixed-layer.</p>
+<p>If TKE <span class="math inline">\geq</span> PE, then layer <span class="math inline">z</span> will be mixed into the mixed layer (the epilimnion). This also includes water quality variables, which will be volume-averaged. Once TKE <span class="math inline">&lt;</span> PE, the remaining energy will be used for partial mixing as in <span class="citation" data-cites="saloranta_mylakemulti-year_2007">Saloranta and Andersen (<a href="#ref-saloranta_mylakemulti-year_2007" role="doc-biblioref">2007</a>)</span>.</p>
+</section>
+<section id="e-convective-overturn" class="level3">
+<h3 class="anchored" data-anchor-id="e-convective-overturn">e) Convective overturn</h3>
+<p>In the final step, any density instabilities over the vertical water column were mixed with the first stable layer below an unstable layer. Here, we applied the area weighed mean of temperature between two layers to calculate the new temperature of the previously unstable grid cell. Density differences between two layers were averaged until the difference was equal or less than <span class="math inline">1</span> x <span class="math inline">10^{-3}</span> kg m<sup>-3</sup>. {An arbitrary cutoff of <span class="math inline">1</span> x <span class="math inline">10^{-3}</span> kg m<sup>-3</sup> was chosen to reduce computational run time by preventing averaging of density profiles to the fourth decimal point.}</p>
+</section>
+</section>
+<section id="water-quality" class="level2">
+<h2 class="anchored" data-anchor-id="water-quality">Water quality</h2>
+<p>The current implementation simulates dissolved oxygen, phytoplankton biomass, a nutrient concentration (simulating reactive phosphorus), labile particulate organic carbon (POC-l), labile dissolved organic carbon (DOC-l), refractory particulate organic carbon (POC-r), and refractory dissolved organic carbon (DOC-r) following a general equation of: <span class="math display">
+A \frac{\partial C}{\partial t} + w \frac{\partial C}{\partial z} - \frac{\partial}{\partial z}(A K_z \frac{\partial C}{\partial z}) = P(C) - D(C)
+</span> where <span class="math inline">w</span> is a sinking rate, <span class="math inline">P(C)</span> is a production term, and <span class="math inline">D(C)</span> is a consumption (destruction) term.</p>
+<p>The main feedback of water quality to hydrodynamics is via the light extinction coefficient:</p>
+<p><span class="math display">
+k_d = k_{d, water} + k_{d, DOC} \overline{C_{DOC}} +  k_{d, POC} \overline{C_{POC}}
+</span> where there are specific light extinction coefficients for background water, DOC and POC, <span class="math inline">k_{d, water}</span>, <span class="math inline">k_{d, DOC}</span> and <span class="math inline">k_{d, POC}</span>, respectively, as well as the average sum of DOC and POC concentrations, <span class="math inline">\overline{C_{DOC}}</span> and <span class="math inline">\overline{C_{POC}}</span>, respectively, from the surface to the mean depth of the lake.</p>
+<p>The water quality simulation is split into three modules dealing with (f) effects of external and internal boundaries, (g) internal production and conumption pathways, and (h) vertical transport.</p>
+<section id="f-boundary-fluxes" class="level3">
+<h3 class="anchored" data-anchor-id="f-boundary-fluxes">f) Boundary fluxes</h3>
+<p>Boundary fluxes include mass addition from external loadings, gas-exchange between the atmosphere and the water column, as well as sediment consumption fluxes.</p>
+<p>For mass fluxes, external loadings in m s<sup>-1</sup> are added directly to the layer adjacent to the atmosphere-water interface and are multiplied with the time step.</p>
+<p>Surface gas exchange for dissolved oxygen was parameterized as <span class="math display">
+F_{atm} = k_{p} (C_{DO, atm} - C_{DO}) A \Delta t
+</span> where <span class="math inline">k_{p}</span> is the piston velocity, and <span class="math inline">C_{DO, atm}</span> is the saturated oxygen concentration. The piston velocity was calculated using the empirical gas exchange model following <span class="citation" data-cites="vachon_ecosystem_2013">Vachon and Prairie (<a href="#ref-vachon_ecosystem_2013" role="doc-biblioref">2013</a>)</span> based on lake area and wind velocity.</p>
+<p>Sediment oxygen demand for the consumption of the dissolved oxygen conentration <span class="math inline">C_{DO}</span> (a sink for oxygen in the model) is quantified as <span class="math display">
+SOD = (F_{DO}  + \frac{D_{diff}}{\delta} C_{DO} A ) \theta_{R}^{T-20} \Delta t
+</span> where <span class="math inline">F_{DO}</span> is an idealized area flux rate (g m<sup>-2</sup> s<sup>-1</sup>), <span class="math inline">D_{diff}</span> is the molecular oxygen diffusion coefficient (m<sup>2</sup> s<sup>-1</sup>), <span class="math inline">\delta</span> is the thickness of the sediment diffusive boundary layer (m, set to a constant value of 0.001 m ), and <span class="math inline">\theta</span> is a temperature multiplier, here for respiration <span class="math inline">R</span>. <span class="math inline">D_{diff}</span> was quantified as a function of water temperature following <span class="citation" data-cites="han_oxygen_1996">Han and Bartels (<a href="#ref-han_oxygen_1996" role="doc-biblioref">1996</a>)</span>.</p>
+<p>The release of nutrients from the sediment, <span class="math inline">SNR</span> (a source of nutrients in the model), was parameterized as a function depending on dissolved oxygen availability (using Michaelis-Menten kinetics) and temperature: <span class="math display">
+SNR = (F_{NUTR} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
+</span> where <span class="math inline">F_{NUTR}</span> is an idealized area flux rate (g m<sup>-2</sup> s<sup>-1</sup>), and <span class="math inline">k_{DO}</span> is the half-saturation concentration of dissolved oxygen (g m<sup>-3</sup>).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In v0.1, SOD is quantified using Michaelis-Menten kinetics: <span class="math display">
+SOD = (F_{DO} \frac{C_{DO}}{k_{DO} + C_{DO}} A)\theta_{R}^{T-20} \Delta t
+</span></p>
+<p>Furter, GPP is quantified as a direct addition to oxygen, POC-l, and DOC-l at every time step using a forward Euler scheme:</p>
+<p><span class="math display">
+GPP = R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+</span> where <span class="math inline">R_{molar}</span> is the respective molar ratio to convert from carbon units into something else, <span class="math inline">p_1</span> is the conversion from short-wave radiation to PAR (2.114), and <span class="math inline">I_P</span> is a calibration coeffcient.</p>
+<p><span class="math display">
+M_{DO}^{t} = M_{DO}^{t-1} + \Delta t * GPP
+</span> <span class="math display">
+M_{POC-l}^{t} = M_{POC-l}^{t-1} + 0.2 \Delta t * GPP
+</span> <span class="math display">
+M_{DOC-l}^{t} = M_{DOC-l}^{t-1} + 0.8 \Delta t * GPP
+</span></p>
+</div>
+</div>
+</section>
+<section id="g-production-and-consumption" class="level3">
+<h3 class="anchored" data-anchor-id="g-production-and-consumption">g) Production and consumption</h3>
+<p>The model tracks the mass dynamics of dissolved oxygen, <span class="math inline">M_{DO}</span>, phytoplankton biomass, <span class="math inline">M_{phyto}</span>, nutrients, <span class="math inline">M_{nutr}</span>, labile particulate organic carbon, <span class="math inline">M_{POC-l}</span>, labile dissolved organic carbon, <span class="math inline">M_{DOC-l}</span>, refractory particulate organic carbon, <span class="math inline">M_{POR-r}</span>, and refractory dissolved organic carbon, <span class="math inline">M_{POC-l}</span>. The respective concentrations, <span class="math inline">C</span> were quantified by dividing the masses with the voume.</p>
+<p>For production terms, gross primary production was quantified as <span class="math display">
+GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+</span> where <span class="math inline">R_{molar}</span> is the respective molar ratio to convert from carbon units into something else, <span class="math inline">p_1</span> is the conversion from short-wave radiation to PAR (2.114), and <span class="math inline">I_P</span> is a calibration coeffcient.</p>
+<p>Respiration was quantified as depending on oxygen availability <span class="math display">
+RSP = M_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
+</span> with <span class="math inline">M_{i}</span> either being nutrient, POC-l, DOC-l, POC-r, or DOC-r, and <span class="math inline">R_i</span> is the respective respiration rate.</p>
+<p>Phytoplankton growth was quantified similar to GPP <span class="math display">
+G = p_2 H p_1 \frac{C_{phyto}}{k_{phyto} + C_{phyto}} \theta_{GPP}^{T-20}
+</span> with <span class="math inline">p_2</span> being the growth rate of algae (d<sup>-1</sup>).</p>
+<p>The respective production and consumption terms for each variable are listed below:</p>
+<p><span class="math display">
+P_{DO} - D_{DO} = GPP - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r} + RSP_{nutr})
+</span> <span class="math display">
+P_{POC-l} - D_{POC-l} = 0.8 GPP - RSP_{POC-l}
+</span> <span class="math display">
+P_{DOC-l} - D_{DOC-l} = (RSP_{POC-l} + 0.2 GPP) - RSP_{DOC-r}
+</span> <span class="math display">
+P_{POC-r} - D_{POC-r} =  - RSP_{POC-r}
+</span> <span class="math display">
+P_{DOC-r} - D_{DOC-r} = RSP_{POC-r} - RSP_{DOC-r}
+</span></p>
+<p><span class="math display">
+P_{phyto} - D_{phyto} = G M_{phyto} - p_3 M_{phyto}  \theta_{GPP}^{T-20}
+</span> with <span class="math inline">p_3</span> as a grazing rate (d<sup>-1</sup>). <span class="math display">
+P_{nutr} - D_{nutr} = p_3 p_4 M_{phyto} R_{molar}  \theta_{GPP}^{T-20} - RSP_{nutr}
+</span> with <span class="math inline">p_4</span> as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In v0.1, no production terms are used as GPP is included in the boundary flux module. Therefore, the following consumption terms are used: <span class="math display">
+P_{DO} - D_{DO} = - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r})
+</span> <span class="math display">
+P_{POC-l} - D_{POC-l} = - RSP_{POC-l}
+</span> <span class="math display">
+P_{DOC-l} - D_{DOC-l} = - RSP_{DOC-r}
+</span> <span class="math display">
+P_{POC-r} - D_{POC-r} =  - RSP_{POC-r}
+</span> <span class="math display">
+P_{DOC-r} - D_{DOC-r} =  - RSP_{DOC-r}
+</span></p>
+</div>
+</div>
+<section id="numerical-implementation-1" class="level4">
+<h4 class="anchored" data-anchor-id="numerical-implementation-1">Numerical implementation</h4>
+<p>For internal production and consumption fluxes, we applied the 2nd-order Modified Patankar-Runge-Kutta scheme, which is mass conservative and unconditionally positive (<span class="citation" data-cites="burchard_patankar_2003">Burchard, Deleersnijder, and Meister (<a href="#ref-burchard_patankar_2003" role="doc-biblioref">2003</a>)</span>): <span class="math display">
+C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
+</span> <span class="math display">
+C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
+</span> <span class="math display">
+\text{with } i = 1, ..., I
+</span> where <span class="math inline">i</span> determines the current water quality constituent, <span class="math inline">P</span> is a source term, and <span class="math inline">D</span> is a sink term.</p>
+</section>
+</section>
+<section id="h-transport" class="level3">
+<h3 class="anchored" data-anchor-id="h-transport">h) Transport</h3>
+<p>For vertical transport, sinking and diffusion were parameterized for particulate and dissolved substances, respectively. For phytoplankton biomass, sinking and diffusion were both applied.</p>
+<p>Sinking was conceptualized as a sinking loss that was applied to every cell: <span class="math display">
+SL = M_i \frac{v_{i,settling}}{\Delta z} \Delta t
+</span> with <span class="math inline">v_{i,settling}</span> as a constant settling velocity. Similarily, a constant sedimentation rate, <span class="math inline">v_{sedimentation}</span> was applied to the grid cell adjacent to the sediment-water interface to remove mass from the model over time.</p>
+<p>Turbulent diffusion was applied to the dissolved substances according to the previously described scheme in (c).</p>
+</section>
+</section>
+<section id="model-parameterization" class="level2">
+<h2 class="anchored" data-anchor-id="model-parameterization">Model parameterization</h2>
+<table class="table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 20%">
+<col style="width: 43%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model parameter</th>
+<th style="text-align: left;">Symbol</th>
+<th style="text-align: right;">Description</th>
+<th style="text-align: center;">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>u</td>
+<td style="text-align: left;"><span class="math inline">T</span></td>
+<td style="text-align: right;">Initial temperature conditions (C)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>o2</td>
+<td style="text-align: left;"><span class="math inline">M_{DO}</span></td>
+<td style="text-align: right;">Initial oxygen conditions (g)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>docr</td>
+<td style="text-align: left;"><span class="math inline">M_{DOC-r}</span></td>
+<td style="text-align: right;">Initial DOC-r conditions (g)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>docl</td>
+<td style="text-align: left;"><span class="math inline">M_{DOC-l}</span></td>
+<td style="text-align: right;">Initial DOC-l conditions (g)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>pocr</td>
+<td style="text-align: left;"><span class="math inline">M_{POC-r}</span></td>
+<td style="text-align: right;">Initial POC-r conditions (g)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>pocl</td>
+<td style="text-align: left;"><span class="math inline">M_{POC-l}</span></td>
+<td style="text-align: right;">Initial POC-l conditions (g)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>alg</td>
+<td style="text-align: left;"><span class="math inline">M_{phyto}</span></td>
+<td style="text-align: right;">Initial phytoplankton conditions (g)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>nutr</td>
+<td style="text-align: left;"><span class="math inline">M_{nutr}</span></td>
+<td style="text-align: right;">Initial nutrient conditions (g)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>startTime</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Start time-date (s)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>endTime</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">End time-date (s)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>area</td>
+<td style="text-align: left;"><span class="math inline">A</span></td>
+<td style="text-align: right;">Depth-discrete areas (m<sup>2</sup>)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>volume</td>
+<td style="text-align: left;"><span class="math inline">V</span></td>
+<td style="text-align: right;">Depth-discrete volumes (m<sup>3</sup>)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>depth</td>
+<td style="text-align: left;"><span class="math inline">z</span></td>
+<td style="text-align: right;">Depth-discrete depths (m)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>zmax</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Maximum lake depth</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>nx</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Maximum grid cell number</td>
+<td style="text-align: center;">50</td>
+</tr>
+<tr class="even">
+<td>dt</td>
+<td style="text-align: left;"><span class="math inline">\Delta t</span></td>
+<td style="text-align: right;">Time step (s)</td>
+<td style="text-align: center;">3600</td>
+</tr>
+<tr class="odd">
+<td>dx</td>
+<td style="text-align: left;"><span class="math inline">\Delta z</span></td>
+<td style="text-align: right;">Space step (s)</td>
+<td style="text-align: center;">0.5</td>
+</tr>
+<tr class="even">
+<td>daily_meteo</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Meteorological driver data</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>secview</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Observed Secchi disk data (ignored since v0.1)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>phosphorus_data</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Observed phosphorus data (ignored in v0.1a)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>ice</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Initial ice condition, TRUE or FALSE</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td>Hi</td>
+<td style="text-align: left;"><span class="math inline">h_{ice}</span></td>
+<td style="text-align: right;">Initial ice thickness (m)</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr class="odd">
+<td>Hs</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Initial snow thickness (m)</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr class="even">
+<td>Hsi</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Initial snow ice thickness (m)</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr class="odd">
+<td>iceT</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Initial moving average temperature for ice (C)</td>
+<td style="text-align: center;">6</td>
+</tr>
+<tr class="even">
+<td>supercooled</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Initial amount of layers below freezing point</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr class="odd">
+<td>diffusion_method</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Numerical method for <span class="math inline">K_z</span></td>
+<td style="text-align: center;">“pacanowskiPhilander”</td>
+</tr>
+<tr class="even">
+<td>scheme</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Numerical method for diffusion</td>
+<td style="text-align: center;">“implicit”</td>
+</tr>
+<tr class="odd">
+<td>km</td>
+<td style="text-align: left;"><span class="math inline">K_m</span></td>
+<td style="text-align: right;">Background eddy diffusivity (m<sup>2</sup>s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">1.4 *10^{-7}</span></td>
+</tr>
+<tr class="even">
+<td>k0</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Adjustable eddy diffusivity parameter (m<sup>2</sup>s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-2}</span></td>
+</tr>
+<tr class="odd">
+<td>weight_kz</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Weighting of eddy diffusivity</td>
+<td style="text-align: center;">0.5</td>
+</tr>
+<tr class="even">
+<td>kd_light</td>
+<td style="text-align: left;"><span class="math inline">k_d</span></td>
+<td style="text-align: right;">Light attenuation (m<sup>-1</sup>, ignored since v0.1)</td>
+<td style="text-align: center;">0.6</td>
+</tr>
+<tr class="odd">
+<td>densThresh</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Density cutoff (kg m<sup>-3</sup>)</td>
+<td style="text-align: center;"><span class="math inline">1.0 * 10^{-2}</span></td>
+</tr>
+<tr class="even">
+<td>albedo</td>
+<td style="text-align: left;"><span class="math inline">\alpha</span></td>
+<td style="text-align: right;">Albedo</td>
+<td style="text-align: center;">0.1</td>
+</tr>
+<tr class="odd">
+<td>eps</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Emissivity of water</td>
+<td style="text-align: center;">0.97</td>
+</tr>
+<tr class="even">
+<td>emissivity</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Emissivity of water (same as eps)</td>
+<td style="text-align: center;">0.97</td>
+</tr>
+<tr class="odd">
+<td>sigma</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Stefan-Boltzmann constant (W m<sup>-2</sup>K<sup>-4</sup>)</td>
+<td style="text-align: center;"><span class="math inline">5.67 *10^{-8}</span></td>
+</tr>
+<tr class="even">
+<td>sw_factor</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Multiplier for short-wave radiation</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+<tr class="odd">
+<td>wind_factor</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Multiplier for wind speed</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+<tr class="even">
+<td>at_factor</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Multiplier for air temperature</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+<tr class="odd">
+<td>turb_factor</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Multiplier for turbulent heat fluxes</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+<tr class="even">
+<td>p2</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Ignored since v0.1</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+<tr class="odd">
+<td>B</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Ignored since v0.1</td>
+<td style="text-align: center;">0.61</td>
+</tr>
+<tr class="even">
+<td>g</td>
+<td style="text-align: left;"><span class="math inline">g</span></td>
+<td style="text-align: right;">Gravitational acceleration (m s<sup>-2</sup>)</td>
+<td style="text-align: center;">9.81</td>
+</tr>
+<tr class="odd">
+<td>Cd</td>
+<td style="text-align: left;"><span class="math inline">C_D</span></td>
+<td style="text-align: right;">Momentum coefficient of wind</td>
+<td style="text-align: center;">0.0013</td>
+</tr>
+<tr class="even">
+<td>meltP</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Multiplier for ice melting</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+<tr class="odd">
+<td>dt_iceon_avg</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Ratio of ice forming temperature</td>
+<td style="text-align: center;">0.8</td>
+</tr>
+<tr class="even">
+<td>Hgeo</td>
+<td style="text-align: left;"><span class="math inline">H_{geo}</span></td>
+<td style="text-align: right;">Geothermal heat flux (W m<sup>-2</sup>)</td>
+<td style="text-align: center;">0.1</td>
+</tr>
+<tr class="odd">
+<td>KEice</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">TKE multiplier for ice conditions (ignored since v0.1)</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr class="even">
+<td>Ice_min</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Minimum ice thickness (m)</td>
+<td style="text-align: center;">0.1</td>
+</tr>
+<tr class="odd">
+<td>pgdl_mode</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Additional data processing</td>
+<td style="text-align: center;">“on”</td>
+</tr>
+<tr class="even">
+<td>rho_snow</td>
+<td style="text-align: left;"><span class="math inline">\rho_{snow}</span></td>
+<td style="text-align: right;">Initial snow density (kg m<sup>-3</sup>)</td>
+<td style="text-align: center;">250</td>
+</tr>
+<tr class="odd">
+<td>p_max</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Multiplier for GPP (ignored since v0.1)</td>
+<td style="text-align: center;">1/86400</td>
+</tr>
+<tr class="even">
+<td>IP</td>
+<td style="text-align: left;"><span class="math inline">I_P</span></td>
+<td style="text-align: right;">Calibration coefficient for GPP</td>
+<td style="text-align: center;"><span class="math inline">3.0 *10^{-6}</span>/86400</td>
+</tr>
+<tr class="odd">
+<td>theta_npp</td>
+<td style="text-align: left;"><span class="math inline">\theta_{GPP}</span></td>
+<td style="text-align: right;">Arrhenius temperature multiplier</td>
+<td style="text-align: center;">1.0</td>
+</tr>
+<tr class="even">
+<td>theta_r</td>
+<td style="text-align: left;"><span class="math inline">\theta_{R}</span></td>
+<td style="text-align: right;">Arrhenius temperature multiplier</td>
+<td style="text-align: center;">1.08</td>
+</tr>
+<tr class="odd">
+<td>conversion_constant</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Multiplier for GPP (ignored since v0.1)</td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-4}</span></td>
+</tr>
+<tr class="even">
+<td>sed_sink</td>
+<td style="text-align: left;"><span class="math inline">F_{nutr}</span></td>
+<td style="text-align: right;">Idealized nutrient source rate (g m<sup>-2</sup> s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.01/86400</td>
+</tr>
+<tr class="odd">
+<td>k_half</td>
+<td style="text-align: left;"><span class="math inline">k_{DO}</span></td>
+<td style="text-align: right;">Half-saturation concentration (g m<sup>-3</sup>)</td>
+<td style="text-align: center;">0.5</td>
+</tr>
+<tr class="even">
+<td>resp_docr</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">DOC-r respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.008/86400</td>
+</tr>
+<tr class="odd">
+<td>resp_docl</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">DOC-l respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.008/86400</td>
+</tr>
+<tr class="even">
+<td>resp_pocr</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">POC-r respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.08/86400</td>
+</tr>
+<tr class="odd">
+<td>resp_pocl</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">POC-l respiration rate (s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.08/86400</td>
+</tr>
+<tr class="even">
+<td>grazing_rate</td>
+<td style="text-align: left;"><span class="math inline">p_3</span></td>
+<td style="text-align: right;">Grazing rate of phytoplankton (s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">3.0 *10^{-3}</span>/86400</td>
+</tr>
+<tr class="odd">
+<td>pocr_settling_rate</td>
+<td style="text-align: left;"><span class="math inline">v_{POC-r,settling}</span></td>
+<td style="text-align: right;">POC-r settling rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.2/86400</td>
+</tr>
+<tr class="even">
+<td>pocl_settling_rate</td>
+<td style="text-align: left;"><span class="math inline">v_{POC-l,settling}</span></td>
+<td style="text-align: right;">POC-l settling rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.2/86400</td>
+</tr>
+<tr class="odd">
+<td>algae_settling_rate</td>
+<td style="text-align: left;"><span class="math inline">v_{phyto,settling}</span></td>
+<td style="text-align: right;">Phytoplankton settling rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-5}</span>/86400</td>
+</tr>
+<tr class="even">
+<td>sediment_rate</td>
+<td style="text-align: left;"><span class="math inline">v_{sedimentation}</span></td>
+<td style="text-align: right;">Sedimentation rate (m s<sup>-1</sup>)</td>
+<td style="text-align: center;">0.5/86400</td>
+</tr>
+<tr class="odd">
+<td>piston_velocity</td>
+<td style="text-align: left;"><span class="math inline">k_p</span></td>
+<td style="text-align: right;">Piston velocity for gas exchange (m s<sup>-1</sup>, ignored since v0.1)</td>
+<td style="text-align: center;">1.0/86400</td>
+</tr>
+<tr class="even">
+<td>light_water</td>
+<td style="text-align: left;"><span class="math inline">k_{d, water}</span></td>
+<td style="text-align: right;">Background light extinction (m<sup>-1</sup>)</td>
+<td style="text-align: center;">0.125</td>
+</tr>
+<tr class="odd">
+<td>light_doc</td>
+<td style="text-align: left;"><span class="math inline">k_{d, DOC}</span></td>
+<td style="text-align: right;">DOC light extinction (m<sup>-1</sup>)</td>
+<td style="text-align: center;">0.02</td>
+</tr>
+<tr class="even">
+<td>light_poc</td>
+<td style="text-align: left;"><span class="math inline">k_{d, POC}</span></td>
+<td style="text-align: right;">POC light extinction (m<sup>-1</sup>)</td>
+<td style="text-align: center;">0.7</td>
+</tr>
+<tr class="odd">
+<td>mean_depth</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Mean depth of the lake (m)</td>
+<td style="text-align: center;"><span class="math inline">\frac{\sum V}{A_s}</span></td>
+</tr>
+<tr class="even">
+<td>W_str</td>
+<td style="text-align: left;"><span class="math inline">C_{shelter}</span></td>
+<td style="text-align: right;">Manual wind-sheltering coefficient</td>
+<td style="text-align: center;">“None”</td>
+</tr>
+<tr class="odd">
+<td>tp_inflow</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Boundary condition of total phosphorus (m<sup>-1</sup>, ignored in v0.1a)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>pocr_inflow</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Mass influx of POC-r (m<sup>-1</sup>, ignored in v0.1)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td>pocl_inflow</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: right;">Mass flux of POC-l (m<sup>-1</sup>, ignored in v0.1)</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td>f_sod</td>
+<td style="text-align: left;"><span class="math inline">F_{DO}</span></td>
+<td style="text-align: right;">Idealized oxygen sink rate (g m<sup>-2</sup> s<sup>-1</sup>, ignored in v0.1)</td>
+<td style="text-align: center;">0.1/86400</td>
+</tr>
+<tr class="odd">
+<td>d_thick</td>
+<td style="text-align: left;"><span class="math inline">\delta</span></td>
+<td style="text-align: right;">Thickness of diffusive boundary layer (m)</td>
+<td style="text-align: center;">0.001</td>
+</tr>
+<tr class="even">
+<td>growth_rate</td>
+<td style="text-align: left;"><span class="math inline">p_2</span></td>
+<td style="text-align: right;">Phytoplankton growth ratio (s<sup>-1</sup>)</td>
+<td style="text-align: center;"><span class="math inline">1.0 *10^{-3}</span>/86400</td>
+</tr>
+<tr class="odd">
+<td>grazing_ratio</td>
+<td style="text-align: left;"><span class="math inline">p_4</span></td>
+<td style="text-align: right;">Grazing ratio</td>
+<td style="text-align: center;">0.1</td>
+</tr>
+</tbody>
+</table>
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-burchard_patankar_2003" class="csl-entry" role="listitem">
+Burchard, Hans, Eric Deleersnijder, and Andreas Meister. 2003. <span>“A High-Order Conservative Patankar-Type Discretisation for Stiff Systems of Production-Destruction Equations.”</span> <em>Applied Numerical Mathematics.</em> 47 (1): 1–30. https://doi.org/<a href="https://doi.org/10.1016/S0168-9274(03)00101-6">https://doi.org/10.1016/S0168-9274(03)00101-6</a>.
+</div>
+<div id="ref-ford_thermal_1980" class="csl-entry" role="listitem">
+Ford, Dennis E, and Heinz G Stefan. 1980. <span>“Thermal Predictions Using Integral Energy Model.”</span> <em>Journal of the Hydraulics Division</em> 106 (1): 39–55. <a href="https://doi.org/10.1061/JYCEAJ.0005358">https://doi.org/10.1061/JYCEAJ.0005358</a>.
+</div>
+<div id="ref-goudsmit_application_2002_epsilon" class="csl-entry" role="listitem">
+Goudsmit, G.-H., H. Burchard, F. Peeters, and A. Wüest. 2002. <span>“Application of <span class="nocase">k-</span> Turbulence Models to Enclosed Basins: <span>The</span> Role of Internal Seiches.”</span> <em>Journal of Geophysical Research: Oceans</em> 107 (C12): 23-1-23-13. <a href="https://doi.org/10.1029/2001JC000954">https://doi.org/10.1029/2001JC000954</a>.
+</div>
+<div id="ref-han_oxygen_1996" class="csl-entry" role="listitem">
+Han, Ping, and David M. Bartels. 1996. <span>“Temperature Dependence of Oxygen Diffusion in H2O and D2O.”</span> <em>J. Phys. Chem.</em> 100 (13): 5597–5602. https://doi.org/<a href="https://doi.org/10.1021/jp952903y">https://doi.org/10.1021/jp952903y</a>.
+</div>
+<div id="ref-henderson-sellers_new_1985" class="csl-entry" role="listitem">
+Henderson-Sellers, B. 1985. <span>“New Formulation of Eddy Diffusion Thermocline Models.”</span> <em>Applied Mathematical Modelling</em> 9 (6): 441–46. <a href="https://doi.org/10.1016/0307-904X(85)90110-6">https://doi.org/10.1016/0307-904X(85)90110-6</a>.
+</div>
+<div id="ref-hondzo_lake_1993" class="csl-entry" role="listitem">
+Hondzo, Midhat, and Heinz G. Stefan. 1993. <span>“Lake <span>Water</span> <span>Temperature</span> <span>Simulation</span> <span>Model</span>.”</span> <em>Journal of Hydraulic Engineering</em> 119 (11): 1251–73. <a href="https://doi.org/10.1061/(ASCE)0733-9429(1993)119:11(1251)">https://doi.org/10.1061/(ASCE)0733-9429(1993)119:11(1251)</a>.
+</div>
+<div id="ref-jabbari_nearshore_2023" class="csl-entry" role="listitem">
+Jabbari, Aidin, Reza Valipur, Josef D. Ackerman, and Yerubandi R. Rao. 2023. <span>“<span class="nocase">Nearshore-offshore exchanges by enhanced turbulent mixing along the north shore of Lake Ontario</span>.”</span> <em>Journal of Great Lakes Research</em> 49 (3): 596–607. https://doi.org/<a href="https://doi.org/10.1016/j.jglr.2023.03.010">https://doi.org/10.1016/j.jglr.2023.03.010</a>.
+</div>
+<div id="ref-lepparanta_review_1993" class="csl-entry" role="listitem">
+Leppäranta, Matti. 1993. <span>“A Review of Analytical Models of Sea‐ice Growth.”</span> <em>Atmosphere-Ocean</em> 31 (1): 123–38. <a href="https://doi.org/10.1080/07055900.1993.9649465">https://doi.org/10.1080/07055900.1993.9649465</a>.
+</div>
+<div id="ref-livingstone_annual_1989" class="csl-entry" role="listitem">
+Livingstone, David M., and Dieter M. Imboden. 1989. <span>“Annual Heat Balance and Equilibrium Temperature of <span>Lake</span> <span>Aegeri</span>, <span>Switzerland</span>.”</span> <em>Aquatic Sciences</em> 51 (4): 351–69. <a href="https://doi.org/10.1007/BF00877177">https://doi.org/10.1007/BF00877177</a>.
+</div>
+<div id="ref-pacanowski_paramterization_1981" class="csl-entry" role="listitem">
+Pacanowski, R. C., and S. G. H. Philander. 1981. <span>“<span class="nocase">Parameterization of Vertical Mixing in Numerical Models of Tropical Oceans</span>.”</span> <em>Journal of Physical Oceanography</em> 1: 1443–51.
+</div>
+<div id="ref-piccolroaz_deep_2013" class="csl-entry" role="listitem">
+Piccolroaz, Sebastiano, and Marco Toffolon. 2013. <span>“Deep Water Renewal in <span>Lake</span> <span>Baikal</span>: <span>A</span> Model for Long-Term Analyses: <span>Deep</span> <span>Water</span> <span>Renewal</span> in <span>Lake</span> <span>Baikal</span>.”</span> <em>Journal of Geophysical Research: Oceans</em> 118 (12): 6717–33. <a href="https://doi.org/10.1002/2013JC009029">https://doi.org/10.1002/2013JC009029</a>.
+</div>
+<div id="ref-press_numericalrecipes" class="csl-entry" role="listitem">
+Press, W. H., S. A. Teukolsky, W. T. Vetterling, and B. P. Flannery. 2007. <em><span>Numerical</span> <span>Recipes:</span> <span>The</span> <span>Art</span> of <span>Scientific</span> <span>Computing</span></em>. Cambridge University Press.
+</div>
+<div id="ref-saloranta_mylakemulti-year_2007" class="csl-entry" role="listitem">
+Saloranta, Tuomo M., and Tom Andersen. 2007. <span>“<span>MyLake</span>—<span>A</span> Multi-Year Lake Simulation Model Code Suitable for Uncertainty and Sensitivity Analysis Simulations.”</span> <em>Ecological Modelling</em>, Uncertainty in <span>Ecological</span> <span>Models</span>, 207 (1): 45–60. <a href="https://doi.org/10.1016/j.ecolmodel.2007.03.018">https://doi.org/10.1016/j.ecolmodel.2007.03.018</a>.
+</div>
+<div id="ref-vachon_ecosystem_2013" class="csl-entry" role="listitem">
+Vachon, Dominic, and Yves T. Prairie. 2013. <span>“The Ecosystem Size and Shape Dependence of Gas Transfer Velocity Versus Wind Speed Relationships in Lakes.”</span> Edited by Ralph Smith. <em>Canadian Journal of Fisheries and Aquatic Sciences</em> 70 (12): 1757–64. <a href="https://doi.org/10.1139/cjfas-2013-0241">https://doi.org/10.1139/cjfas-2013-0241</a>.
+</div>
+<div id="ref-verburg_persistent_2010" class="csl-entry" role="listitem">
+Verburg, Piet, and Jason P. Antenucci. 2010. <span>“Persistent Unstable Atmospheric Boundary Layer Enhances Sensible and Latent Heat Loss in a Tropical Great Lake: <span>Lake</span> <span>Tanganyika</span>.”</span> <em>Journal of Geophysical Research</em> 115 (D11): D11109. <a href="https://doi.org/10.1029/2009JD012839">https://doi.org/10.1029/2009JD012839</a>.
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
