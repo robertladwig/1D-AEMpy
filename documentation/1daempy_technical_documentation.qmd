@@ -31,6 +31,8 @@ editor_options:
 
 This documentation describes the current version 0.1a of 1D-AEMpy, which includes hydrodynamic calculations coupled to a functional aquatic ecosystem model that explicitly simulates dissolved oxygen, phytoplankton biomass, a nutrient concentration (simulating reactive phosphorus), labile particulate organic carbon (POC-l), labile dissolved organic carbon (DOC-l), refractory particulate organic carbon (POC-r), and refractory dissolved organic carbon (DOC-r). The coupling between both models depends primarily on the light extinction coefficient (function of the sum of organic carbon concentrations) to the heat attenuation of the water column, as well as the derived eddy diffusivity governing the vertical diffusion of dissolved water quality variables.
 
+![Conceptual diagram of 1D-AEMpy.](figures/conceptual_diagram.png){#fig-best_model}
+
 :::{.callout-note}
 Version 0.1a differs to v0.1 in a set of important aspects:
 

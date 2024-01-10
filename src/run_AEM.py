@@ -123,7 +123,7 @@ res = run_wq_model(
     pgdl_mode = 'on',
     rho_snow = 250,
     p_max = 1/86400,
-    IP = 3e-6/86400 ,#0.1, 3e-5
+    IP = 3e-2/86400 ,#0.1, 3e-6
     theta_npp = 1.0, #1.08,
     theta_r = 1.08, #1.08,
     conversion_constant = 1e-4,#0.1
@@ -147,9 +147,9 @@ res = run_wq_model(
     tp_inflow = np.mean(tp_boundary['tp'])/1000 * volume[0] * 1/1e6,
     pocr_inflow = 0.5 * volume[0] * 1/1e5,
     pocl_inflow = 0.5 * volume[0] * 1/1e5,
-    f_sod = 0.1 / 86400,
+    f_sod = 0.01 / 86400,
     d_thick = 0.001,
-    growth_rate = 1.0e-3/86400,
+    growth_rate = 1.1e-3/86400,
     grazing_ratio = 0.1)
 
 temp=  res['temp']
@@ -394,13 +394,13 @@ ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(npp)/volume) * 86400, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+sns.heatmap(npp , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
 ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
            colors=['black', 'gray'],
            linestyles = 'dotted')
 ax.set_ylabel("Depth (m)", fontsize=15)
 ax.set_xlabel("Time", fontsize=15)    
-ax.collections[0].colorbar.set_label("NPP  (g/m3/d)")
+ax.collections[0].colorbar.set_label("NPP  (/d)")
 xticks_ix = np.array(ax.get_xticks()).astype(int)
 time_label = times[xticks_ix]
 nelement = len(times)//N_pts
@@ -502,11 +502,11 @@ plt.show()
 # plt.plot(docl_respiration[0,:]/volume[0]*86400)
 # plt.plot(o2[(nx-1),:]/volume[(nx-1)])
 
-plt.plot(o2[1,1:(24*28)]/volume[1]/4, color = 'blue', label = 'O2')
-gpp = 1/86400 *pocl[1,:] *npp[1,:] -1/86400 *(docl[1,:] * docl_respiration[1,:]+ docr[1,:] * docr_respiration[1,:] + pocl[1,:] * pocl_respiration[1,:] + pocr[1,:] * pocr_respiration[1,:])
-plt.plot(pocl[1,1:(24*28)] *npp[1,1:(24*28)]* 1/86400, color = 'yellow', label = 'NPP') 
-plt.plot(1/86400*(docl[1,1:(24*28)] * docl_respiration[1,1:(24*28)]+ docr[1,1:(24*28)] * docr_respiration[1,1:(24*28)] + pocl[1,1:(24*28)] * pocl_respiration[1,1:(24*28)] + pocr[1,1:(24*28)] * pocr_respiration[1,1:(24*28)])/volume[1] * 86400, color = 'red', label = 'R') 
-plt.plot(gpp[1:(24*28)]/volume[1] * 86400, color = 'green', label = 'GPP')
+#plt.plot(o2[1,1:(24*28)]/volume[1]/4, color = 'blue', label = 'O2')
+nep = 1/86400 *alg[1,:] *npp[1,:] -1/86400 *(docl[1,:] * docl_respiration[1,:]+ docr[1,:] * docr_respiration[1,:] + pocl[1,:] * pocl_respiration[1,:] + pocr[1,:] * pocr_respiration[1,:])
+plt.plot(alg[1,1:(24*90)] *npp[1,1:(24*90)]* 1/86400 * 1/ volume[1], color = 'green', label = 'GPP') 
+plt.plot(1/86400*(docl[1,1:(24*90)] * docl_respiration[1,1:(24*90)]+ docr[1,1:(24*90)] * docr_respiration[1,1:(24*90)] + pocl[1,1:(24*90)] * pocl_respiration[1,1:(24*90)] + pocr[1,1:(24*90)] * pocr_respiration[1,1:(24*90)])/volume[1] , color = 'red', label = 'R') 
+plt.plot(nep[1:(24*90)]/volume[1] , color = 'yellow', label = 'NEP')
 plt.legend(loc='best')
 plt.show() 
 
