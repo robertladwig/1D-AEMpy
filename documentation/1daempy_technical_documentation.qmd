@@ -58,7 +58,7 @@ $$
     A \frac{\partial T}{\partial t}=\frac{\partial}{\partial z}(A K_z \frac{\partial T}{\partial z}) + \frac{1}{{\rho_w c_p}}\frac{\partial H(z)}{\partial z}  + \frac{\partial A}{\partial z}\frac{H_{geo}}{\rho_w c_p}
 $$
 
-where $h$ is the water level (m), $A$ is lake area (m<sup>2</sup>), $T$ is water temperature (\textdegree C), $t$ is time (s), $K_z$ is the vertical diffusion coefficient m<sup>2</sup> s<sup>-1</sup>, $H$ is internal heat generation due to incoming solar radiation (W m<sup>2</sup>), $\rho_w$ is water density (kg m<sup>-3</sup>), $c_p$ is specific heat content of water (J kg<sup>-1</sup> \textdegree C<sup>-1</sup>), and $H_{geo}$ is internal geothermal heat generation (W m<sup>-2</sup>) (which was set to 0.1 W m<sup>-2</sup> (@goudsmit_application_2002_epsilon)). Internal heat generation is implemented based on Beer-Lambert law for attenuation of short-wave radiation as a function of a constant light attenuation coefficient:
+where $h$ is the water level (m), $A$ is lake area (m<sup>2</sup>), $T$ is water temperature (\textdegree C), $t$ is time (s), $K_z$ is the vertical diffusion coefficient m<sup>2</sup> s<sup>-1</sup>, $H$ is internal heat generation due to incoming solar radiation (W m<sup>2</sup>), $\rho_w$ is water density (kg m<sup>-3</sup>), $c_p$ is specific heat content of water (J kg<sup>-1</sup> \textdegree C<sup>-1</sup>), and $H_{geo}$ is internal geothermal heat generation (W m<sup>-2</sup>) (which was set to 0.1 W m<sup>-2</sup> (@goudsmit_application_2002)). Internal heat generation is implemented based on Beer-Lambert law for attenuation of short-wave radiation as a function of a constant light attenuation coefficient:
 $$
     H(z)=\left(1-\alpha\right)I_s \text{exp}\left(-k_d z\right)
 $$
@@ -74,7 +74,7 @@ where $H_{net}$ is the net heat flux exchange between atmosphere and water colum
 $$
     H_{net}=H_{lw}+H_{lwr}+H_v+H_c
 $$
-where $H_{lw}$ is the incoming long-wave radiation (W m<sup>-2</sup>), $H_{lwr}$ is emitted radiation from the water column (W m<sup>-2</sup>), $H_v$ is the latent heat flux (W m<sup>-2</sup>), and $H_c$ is the sensible heat flux (W m<sup>-2</sup>). Incoming and outgoing long-wave heat fluxes were derived using the formulations from @livingstone_annual_1989 and @goudsmit_application_2002_epsilon. The latent and sensible heat fluxes were calculated taking into account atmospheric stability using the algorithm by @verburg_persistent_2010.
+where $H_{lw}$ is the incoming long-wave radiation (W m<sup>-2</sup>), $H_{lwr}$ is emitted radiation from the water column (W m<sup>-2</sup>), $H_v$ is the latent heat flux (W m<sup>-2</sup>), and $H_c$ is the sensible heat flux (W m<sup>-2</sup>). Incoming and outgoing long-wave heat fluxes were derived using the formulations from @livingstone_annual_1989 and @goudsmit_application_2002. The latent and sensible heat fluxes were calculated taking into account atmospheric stability using the algorithm by @verburg_persistent_2010.
 
 The calculation of a temperature profile at every time step is modularized into four steps: (a) heat generation from boundary conditions, (b) ice and snow formation,
 (c) vertical diffusion, (d) wind-induced mixing, and (e) convective overturn. The one-dimensional temperature diffusion equation was discretized using the implicit Crank-Nicolson scheme (@press_numericalrecipes), which being second-order in both space and time allows the modeling time step to be dynamic without numerical stability issues. The model was implemented in Python 3.7 with a default time step of $\Delta t = 3,600$ s and a default spatial discretization of $\Delta z = 0.5$ m.
@@ -248,24 +248,39 @@ $$
 
 The model tracks the mass dynamics of dissolved oxygen, $M_{DO}$, phytoplankton biomass, $M_{phyto}$, nutrients, $M_{nutr}$, labile particulate organic carbon, $M_{POC-l}$, labile dissolved organic carbon, $M_{DOC-l}$, refractory particulate organic carbon, $M_{POR-r}$, and refractory dissolved organic carbon, $M_{POC-l}$. The respective concentrations, $C$ were quantified by dividing the masses with the voume. 
 
+<!--
+%$$
+%GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+%$$
+%where $R_{molar}$ is the respective molar ratio to convert from %carbon units into something else, $p_1$ is the conversion from %short-wave radiation to PAR (2.114), and $I_P$ is a calibration %coeffcient.
+-->
+
 For production terms, gross primary production was quantified as
 $$
-GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+GPP = (1 - \exp({\alpha H p_1 p_2^{-1}})) \exp({\beta H p_1 p_2^{-1}}) K_{Chla:DO} \theta_{GPP}^{T-20}
 $$
-where $R_{molar}$ is the respective molar ratio to convert from carbon units into something else, $p_1$ is the conversion from short-wave radiation to PAR (2.114), and $I_P$ is a calibration coeffcient.
+where $\alpha$ and $\beta$ are fitted parameters, $p_1$ is the conversion from short-wave radiation to PAR (2.114), $p_2$ is the growth rate of algae (s<sup>-1</sup>), and $K_{Chla:DO}$ is the  ratio of Chl-a to dissolved oxygen ($\frac{g \, DO}{g \, Chla}s^{-1}$).
 
 Respiration was quantified as depending on oxygen availability
 $$
-RSP = M_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
+RSP = K_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
 $$
-with $M_{i}$ either being nutrient, POC-l, DOC-l, POC-r, or DOC-r, and $R_i$ is the respective respiration rate.
+where $R_i$ is the respective respiration rate (s<sup>-1</sup>).
 
-Phytoplankton growth was quantified similar to GPP
+Phytoplankton growth was quantified depending on GPP and nutrient concentrations:
+<!--
+$K_{molar}$ is the respective molar ratio to convert from carbon units into something else, and
+%$$
+%G = p_2 H p_1 \frac{C_{phyto}}{k_{phyto} + C_{phyto}} \theta_%{GPP}^{T-20}
+%$$
+-->
 $$
-G = p_2 H p_1 \frac{C_{phyto}}{k_{phyto} + C_{phyto}} \theta_{GPP}^{T-20}
+G = p_2 \frac{GPP}{K_{Chla:DO}}\frac{C_{nutr}}{k_{nutr} + C_{nutr}}  \theta_{GPP}^{T-20} 
 $$
-with $p_2$ being the growth rate of algae (d<sup>-1</sup>).
 
+Note that GPP is in g DO s<sup>-1</sup>, RSP is in g C s<sup>-1</sup>, and G is in g Chl-a s<sup>-1</sup>, which means the quantities have to be converted from oxygen units to carbon units to chlorophyll-a units, etc.
+
+<!--
 The respective production and consumption terms for each variable are listed below:
 
 $$
@@ -292,6 +307,69 @@ $$
 P_{nutr} - D_{nutr} = p_3 p_4 M_{phyto} R_{molar}  \theta_{GPP}^{T-20} - RSP_{nutr}
 $$
 with $p_4$ as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate).
+-->
+This results in the following set of dependencies for production terms:
+$$
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix} =
+\begin{bmatrix}
+0  & 0 & 0 &0 & 0 & GPP & 0 \\
+0  & 0 & 0 & RSP_{POC-R}& 0 &0 & 0\\
+0  & 0 & 0 &0 & RSP_{POC-L} & \frac{1}{5}\frac{12}{32}GPP & 0\\
+0  & 0 & 0 &0 & 0 & 0 & 0 \\
+0  & 0 & 0 &0 & 0 & (1-\frac{1}{5})\frac{12}{32}GPP & 0\\
+0  & 0 & 0 &0 & 0 & G & 0 \\
+0  & 0 & 0 &0 & 0 & p_3 p_4 \theta_{GPP}^{T-20} & 0
+\end{bmatrix}
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix} 
+$$
+
+where $p_3$ as a grazing rate (s<sup>-1</sup>), and $p_4$ as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate). The destruction matrix has the following dependencies:
+
+$$
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix} =
+\begin{bmatrix}
+0  & \frac{32}{12} RSP_{DOC-R} & \frac{32}{12} RSP_{DOC-L} &\frac{32}{12} RSP_{POC-R} & \frac{32}{12} RSP_{POC-RL} & 0 & \frac{32}{12} RSP_{DOC-L} \\
+0  & RSP_{DOC-R} & 0 & 0& 0 &0 & 0\\
+0  & 0 & RSP_{DOC-L} &0 & 0 & 0 & 0\\
+0  & 0 & 0 &RSP_{POC-R} & 0 & 0 & 0 \\
+0  & 0 & 0 &0 & RSP_{POC-L} &0 & 0\\
+0  & 0 & 0 &0 & 0 & p_3 \theta_{GPP}^{T-20} & 0 \\
+0  & 0 & 0 &0 & 0 & 0& RSP_{DOC-L} 
+\end{bmatrix}
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix} 
+$$
 
 :::{.callout-note}
 In v0.1, no production terms are used as GPP is included in the boundary flux module. Therefore, the following consumption terms are used:
@@ -318,7 +396,7 @@ $$
 C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
 $$
 $$
-C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
+C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{P,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
 $$
 $$
 \text{with } i = 1, ..., I

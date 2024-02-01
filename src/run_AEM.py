@@ -38,8 +38,8 @@ startTime =   (140 + 365*12) * hydrodynamic_timestep/dt - (365*24*2) #150 * 24 *
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
 hydrodynamic_timestep = 24 * dt
-total_runtime =  (365 *5.5) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365
-startTime =   (140 + 365*5) * hydrodynamic_timestep/dt  #150 * 24 * 3600
+total_runtime =  (365 *1.5) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365
+startTime =   (160 + 365*5) * hydrodynamic_timestep/dt  #150 * 24 * 3600
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
 startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
@@ -76,7 +76,7 @@ res = run_wq_model(
     docl = 1.0 * volume,
     pocr = 0.5 * volume,
     pocl = 0.5 * volume,
-    alg = 0.7 * volume,
+    alg = 10/1000 * volume,
     nutr = np.mean(tp_boundary['tp'])/1000* volume,
     startTime = startTime, 
     endTime = endTime, 
@@ -96,6 +96,7 @@ res = run_wq_model(
     Hsi = 0,
     iceT = 6,
     supercooled = 0,
+    coupled = 'off',
     diffusion_method = 'pacanowskiPhilander',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
     scheme ='implicit',
     km = 1.4 * 10**(-7), # 4 * 10**(-6), 
@@ -120,37 +121,41 @@ res = run_wq_model(
     Hgeo = 0.1, # geothermal heat 
     KEice = 0,
     Ice_min = 0.1,
-    pgdl_mode = 'on',
+    pgdl_mode = 'off',
     rho_snow = 250,
     p_max = 1/86400,
     IP = 3e-2/86400 ,#0.1, 3e-6
     theta_npp = 1.0, #1.08,
     theta_r = 1.08, #1.08,
     conversion_constant = 1e-4,#0.1
-    sed_sink =0.01 / 86400, #0.01
-    k_half = 0.5, #0.5,
-    resp_docr = 0.008/86400, # 0.001 0.0001
-    resp_docl = 0.08/86400, # 0.01 0.05
-    resp_pocr = 0.008/86400, # 0.03 0.1 0.001 0.0001
-    resp_pocl = 0.08/86400,
-    grazing_rate = 3e-3/86400, # 3e-3/86400
-    pocr_settling_rate = 0.2/86400,
-    pocl_settling_rate = 0.2/86400,
+    sed_sink =0.005 / 86400, #0.01
+    k_half = 3.1, #0.5,
+    resp_docr = 0.008/86400, # 0.08 0.001 0.0001
+    resp_docl = 0.008/86400, # 0.01 0.05
+    resp_pocr = 0.004/86400, # 0.04 0.1 0.001 0.0001
+    resp_pocl = 0.004/86400,
+    grazing_rate = 0.9/86400, #1e-1/86400, # 3e-3/86400
+    pocr_settling_rate = 1e-3/86400,
+    pocl_settling_rate = 1e-3/86400,
     algae_settling_rate = 1e-5/86400,
-    sediment_rate = 0.5/86400,
+    sediment_rate = 10/86400,
     piston_velocity = 1.0/86400,
     light_water = 0.125,
     light_doc = 0.02,
     light_poc = 0.7,
     mean_depth = sum(volume)/max(area),
     W_str = None,
-    tp_inflow = np.mean(tp_boundary['tp'])/1000 * volume[0] * 5/1e7,
-    pocr_inflow = 0.5 * volume[0] * 1/1e5,
-    pocl_inflow = 0.5 * volume[0] * 1/1e5,
+    tp_inflow = 0,#np.mean(tp_boundary['tp'])/1000 * volume[0] * 1/1e6,
+    alg_inflow = 0.1 * volume[0] * 5/1e6,
+    pocr_inflow = 0.1 * volume[0] * 1/1e7,
+    pocl_inflow = 0.1 * volume[0] * 1/1e7,
     f_sod = 0.01 / 86400,
     d_thick = 0.001,
-    growth_rate = 1.0e-3/86400, # 1.0e-3
-    grazing_ratio = 0.1)
+    growth_rate = 0.5/86400, # 1.0e-3
+    grazing_ratio = 0.1,
+    alpha_gpp = 0.03/86400,
+    beta_gpp = 0.00017/86400,
+    o2_to_chla = 2.15/3600)
 
 temp=  res['temp']
 o2=  res['o2']
@@ -175,6 +180,7 @@ snowthickness= res['snowthickness']
 snowicethickness= res['snowicethickness']
 npp = res['npp']
 algae_growth = res['algae_growth']
+algae_grazing = res['algae_grazing']
 docr_respiration = res['docr_respiration']
 docl_respiration = res['docl_respiration']
 pocr_respiration = res['pocr_respiration']
@@ -188,7 +194,8 @@ End = datetime.datetime.now()
 print(End - Start)
 
     
-#plt.plot(times, energy_ratio[0,:])
+plt.plot(times, energy_ratio[0,:])
+plt.show()
 
 # heatmap of temps  
 N_pts = 6
@@ -206,9 +213,11 @@ ax.collections[0].colorbar.set_label("Water Temperature  ($^\circ$C)")
 xticks_ix = np.array(ax.get_xticks()).astype(int)
 time_label = times[xticks_ix]
 nelement = len(times)//N_pts
+time_label = times[::nelement]
 #time_label = time_label[::nelement]
-ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
-ax.set_xticklabels(time_label, rotation=0)
+#ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+time_label = times[np.array(ax.get_xticks()).astype(int)]
+ax.set_xticklabels(time_label, rotation=90)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
 depth_label = yticks_ix / 2
 ax.set_yticklabels(depth_label, rotation=0)
@@ -235,7 +244,10 @@ ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
 
-
+# plt.plot(o2[0,:]/volume[0])
+# ax = plt.gca()
+# ax.set_ylim(0,20)
+# plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
 sns.heatmap(np.transpose(np.transpose(o2)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
@@ -375,13 +387,32 @@ plt.show()
 
 
 fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(algae_growth)/volume) * 86400, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+sns.heatmap(np.transpose(np.transpose(algae_growth)) , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
 ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
            colors=['black', 'gray'],
            linestyles = 'dotted')
 ax.set_ylabel("Depth (m)", fontsize=15)
 ax.set_xlabel("Time", fontsize=15)    
-ax.collections[0].colorbar.set_label("Algae growth  (g/m3/d)")
+ax.collections[0].colorbar.set_label("Algae growth  (/d)")
+xticks_ix = np.array(ax.get_xticks()).astype(int)
+time_label = times[xticks_ix]
+nelement = len(times)//N_pts
+#time_label = time_label[::nelement]
+ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+ax.set_xticklabels(time_label, rotation=0)
+yticks_ix = np.array(ax.get_yticks()).astype(int)
+depth_label = yticks_ix / 2
+ax.set_yticklabels(depth_label, rotation=0)
+plt.show()
+
+fig, ax = plt.subplots(figsize=(15,5))
+sns.heatmap(np.transpose(np.transpose(algae_grazing)) , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+           colors=['black', 'gray'],
+           linestyles = 'dotted')
+ax.set_ylabel("Depth (m)", fontsize=15)
+ax.set_xlabel("Time", fontsize=15)    
+ax.collections[0].colorbar.set_label("Algae grazing  (/d)")
 xticks_ix = np.array(ax.get_xticks()).astype(int)
 time_label = times[xticks_ix]
 nelement = len(times)//N_pts

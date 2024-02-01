@@ -193,7 +193,7 @@ Note
 <p><span class="math display">
     A \frac{\partial T}{\partial t}=\frac{\partial}{\partial z}(A K_z \frac{\partial T}{\partial z}) + \frac{1}{{\rho_w c_p}}\frac{\partial H(z)}{\partial z}  + \frac{\partial A}{\partial z}\frac{H_{geo}}{\rho_w c_p}
 </span></p>
-<p>where <span class="math inline">h</span> is the water level (m), <span class="math inline">A</span> is lake area (m<sup>2</sup>), <span class="math inline">T</span> is water temperature (C), <span class="math inline">t</span> is time (s), <span class="math inline">K_z</span> is the vertical diffusion coefficient m<sup>2</sup> s<sup>-1</sup>, <span class="math inline">H</span> is internal heat generation due to incoming solar radiation (W m<sup>2</sup>), <span class="math inline">\rho_w</span> is water density (kg m<sup>-3</sup>), <span class="math inline">c_p</span> is specific heat content of water (J kg<sup>-1</sup> C<sup>-1</sup>), and <span class="math inline">H_{geo}</span> is internal geothermal heat generation (W m<sup>-2</sup>) (which was set to 0.1 W m<sup>-2</sup> (<span class="citation" data-cites="goudsmit_application_2002_epsilon">Goudsmit et al. (<a href="#ref-goudsmit_application_2002_epsilon" role="doc-biblioref">2002</a>)</span>)). Internal heat generation is implemented based on Beer-Lambert law for attenuation of short-wave radiation as a function of a constant light attenuation coefficient: <span class="math display">
+<p>where <span class="math inline">h</span> is the water level (m), <span class="math inline">A</span> is lake area (m<sup>2</sup>), <span class="math inline">T</span> is water temperature (C), <span class="math inline">t</span> is time (s), <span class="math inline">K_z</span> is the vertical diffusion coefficient m<sup>2</sup> s<sup>-1</sup>, <span class="math inline">H</span> is internal heat generation due to incoming solar radiation (W m<sup>2</sup>), <span class="math inline">\rho_w</span> is water density (kg m<sup>-3</sup>), <span class="math inline">c_p</span> is specific heat content of water (J kg<sup>-1</sup> C<sup>-1</sup>), and <span class="math inline">H_{geo}</span> is internal geothermal heat generation (W m<sup>-2</sup>) (which was set to 0.1 W m<sup>-2</sup> (<span class="citation" data-cites="goudsmit_application_2002">Goudsmit et al. (<a href="#ref-goudsmit_application_2002" role="doc-biblioref">2002</a>)</span>)). Internal heat generation is implemented based on Beer-Lambert law for attenuation of short-wave radiation as a function of a constant light attenuation coefficient: <span class="math display">
     H(z)=\left(1-\alpha\right)I_s \text{exp}\left(-k_d z\right)
 </span> where <span class="math inline">\alpha</span> is the albedo (<span class="math inline">-</span>), <span class="math inline">I_s</span> is total incident short-wave radiation (W m<sup>-2</sup>), and <span class="math inline">k_d</span> is a light attenuation coefficient (m<sup>-1</sup>). For the boundary conditions, we assume a Neumann type for the temperature diffusion equation at the atmosphere-surface boundary, and a zero-flux Neumann type at the bottom: <span class="math display">
     \rho_w c_p(K_z \frac{\partial T}{\partial z})_{surface}=H_{net}
@@ -201,7 +201,7 @@ Note
     K_z (\frac{\partial T}{\partial z})_{bottom}=0
 </span> where <span class="math inline">H_{net}</span> is the net heat flux exchange between atmosphere and water column (W m<sup>-2</sup>). The neat heat flux exchange consisted of four terms: <span class="math display">
     H_{net}=H_{lw}+H_{lwr}+H_v+H_c
-</span> where <span class="math inline">H_{lw}</span> is the incoming long-wave radiation (W m<sup>-2</sup>), <span class="math inline">H_{lwr}</span> is emitted radiation from the water column (W m<sup>-2</sup>), <span class="math inline">H_v</span> is the latent heat flux (W m<sup>-2</sup>), and <span class="math inline">H_c</span> is the sensible heat flux (W m<sup>-2</sup>). Incoming and outgoing long-wave heat fluxes were derived using the formulations from <span class="citation" data-cites="livingstone_annual_1989">Livingstone and Imboden (<a href="#ref-livingstone_annual_1989" role="doc-biblioref">1989</a>)</span> and <span class="citation" data-cites="goudsmit_application_2002_epsilon">Goudsmit et al. (<a href="#ref-goudsmit_application_2002_epsilon" role="doc-biblioref">2002</a>)</span>. The latent and sensible heat fluxes were calculated taking into account atmospheric stability using the algorithm by <span class="citation" data-cites="verburg_persistent_2010">Verburg and Antenucci (<a href="#ref-verburg_persistent_2010" role="doc-biblioref">2010</a>)</span>.</p>
+</span> where <span class="math inline">H_{lw}</span> is the incoming long-wave radiation (W m<sup>-2</sup>), <span class="math inline">H_{lwr}</span> is emitted radiation from the water column (W m<sup>-2</sup>), <span class="math inline">H_v</span> is the latent heat flux (W m<sup>-2</sup>), and <span class="math inline">H_c</span> is the sensible heat flux (W m<sup>-2</sup>). Incoming and outgoing long-wave heat fluxes were derived using the formulations from <span class="citation" data-cites="livingstone_annual_1989">Livingstone and Imboden (<a href="#ref-livingstone_annual_1989" role="doc-biblioref">1989</a>)</span> and <span class="citation" data-cites="goudsmit_application_2002">Goudsmit et al. (<a href="#ref-goudsmit_application_2002" role="doc-biblioref">2002</a>)</span>. The latent and sensible heat fluxes were calculated taking into account atmospheric stability using the algorithm by <span class="citation" data-cites="verburg_persistent_2010">Verburg and Antenucci (<a href="#ref-verburg_persistent_2010" role="doc-biblioref">2010</a>)</span>.</p>
 <p>The calculation of a temperature profile at every time step is modularized into four steps: (a) heat generation from boundary conditions, (b) ice and snow formation, (c) vertical diffusion, (d) wind-induced mixing, and (e) convective overturn. The one-dimensional temperature diffusion equation was discretized using the implicit Crank-Nicolson scheme (<span class="citation" data-cites="press_numericalrecipes">Press et al. (<a href="#ref-press_numericalrecipes" role="doc-biblioref">2007</a>)</span>), which being second-order in both space and time allows the modeling time step to be dynamic without numerical stability issues. The model was implemented in Python 3.7 with a default time step of <span class="math inline">\Delta t = 3,600</span> s and a default spatial discretization of <span class="math inline">\Delta z = 0.5</span> m.</p>
 <section id="a-heat-generation-from-boundary-conditions" class="level3">
 <h3 class="anchored" data-anchor-id="a-heat-generation-from-boundary-conditions">a) Heat generation from boundary conditions</h3>
@@ -326,32 +326,114 @@ M_{DOC-l}^{t} = M_{DOC-l}^{t-1} + 0.8 \Delta t * GPP
 <section id="g-production-and-consumption" class="level3">
 <h3 class="anchored" data-anchor-id="g-production-and-consumption">g) Production and consumption</h3>
 <p>The model tracks the mass dynamics of dissolved oxygen, <span class="math inline">M_{DO}</span>, phytoplankton biomass, <span class="math inline">M_{phyto}</span>, nutrients, <span class="math inline">M_{nutr}</span>, labile particulate organic carbon, <span class="math inline">M_{POC-l}</span>, labile dissolved organic carbon, <span class="math inline">M_{DOC-l}</span>, refractory particulate organic carbon, <span class="math inline">M_{POR-r}</span>, and refractory dissolved organic carbon, <span class="math inline">M_{POC-l}</span>. The respective concentrations, <span class="math inline">C</span> were quantified by dividing the masses with the voume.</p>
+<!--
+%$$
+%GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
+%$$
+%where $R_{molar}$ is the respective molar ratio to convert from %carbon units into something else, $p_1$ is the conversion from %short-wave radiation to PAR (2.114), and $I_P$ is a calibration %coeffcient.
+-->
 <p>For production terms, gross primary production was quantified as <span class="math display">
-GPP = M_{phyto} R_{molar} (H p_1 I_P C_{nutr} \theta_{GPP}^{T-20})
-</span> where <span class="math inline">R_{molar}</span> is the respective molar ratio to convert from carbon units into something else, <span class="math inline">p_1</span> is the conversion from short-wave radiation to PAR (2.114), and <span class="math inline">I_P</span> is a calibration coeffcient.</p>
+GPP = (1 - \exp({\alpha H p_1 p_2^{-1}})) \exp({\beta H p_1 p_2^{-1}}) K_{Chla:DO} \theta_{GPP}^{T-20}
+</span> where <span class="math inline">\alpha</span> and <span class="math inline">\beta</span> are fitted parameters, <span class="math inline">p_1</span> is the conversion from short-wave radiation to PAR (2.114), <span class="math inline">p_2</span> is the growth rate of algae (s<sup>-1</sup>), and <span class="math inline">K_{Chla:DO}</span> is the ratio of Chl-a to dissolved oxygen (<span class="math inline">\frac{g \, DO}{g \, Chla}s^{-1}</span>).</p>
 <p>Respiration was quantified as depending on oxygen availability <span class="math display">
-RSP = M_{i} R_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
-</span> with <span class="math inline">M_{i}</span> either being nutrient, POC-l, DOC-l, POC-r, or DOC-r, and <span class="math inline">R_i</span> is the respective respiration rate.</p>
-<p>Phytoplankton growth was quantified similar to GPP <span class="math display">
-G = p_2 H p_1 \frac{C_{phyto}}{k_{phyto} + C_{phyto}} \theta_{GPP}^{T-20}
-</span> with <span class="math inline">p_2</span> being the growth rate of algae (d<sup>-1</sup>).</p>
-<p>The respective production and consumption terms for each variable are listed below:</p>
-<p><span class="math display">
-P_{DO} - D_{DO} = GPP - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r} + RSP_{nutr})
-</span> <span class="math display">
-P_{POC-l} - D_{POC-l} = 0.8 GPP - RSP_{POC-l}
-</span> <span class="math display">
-P_{DOC-l} - D_{DOC-l} = (RSP_{POC-l} + 0.2 GPP) - RSP_{DOC-r}
-</span> <span class="math display">
-P_{POC-r} - D_{POC-r} =  - RSP_{POC-r}
-</span> <span class="math display">
-P_{DOC-r} - D_{DOC-r} = RSP_{POC-r} - RSP_{DOC-r}
+RSP = K_{molar} R_i \frac{C_{DO}}{k_{DO} + C_{DO}} \theta_{R}^{T-20}
+</span> where <span class="math inline">R_i</span> is the respective respiration rate (s<sup>-1</sup>).</p>
+<p>Phytoplankton growth was quantified depending on GPP and nutrient concentrations: <!--
+$K_{molar}$ is the respective molar ratio to convert from carbon units into something else, and
+%$$
+%G = p_2 H p_1 \frac{C_{phyto}}{k_{phyto} + C_{phyto}} \theta_%{GPP}^{T-20}
+%$$
+--> <span class="math display">
+G = p_2 \frac{GPP}{K_{Chla:DO}}\frac{C_{nutr}}{k_{nutr} + C_{nutr}}  \theta_{GPP}^{T-20}
 </span></p>
-<p><span class="math display">
+<p>Note that GPP is in g DO s<sup>-1</sup>, RSP is in g C s<sup>-1</sup>, and G is in g Chl-a s<sup>-1</sup>, which means the quantities have to be converted from oxygen units to carbon units to chlorophyll-a units, etc.</p>
+<!--
+The respective production and consumption terms for each variable are listed below:
+
+$$
+P_{DO} - D_{DO} = GPP - (RSP_{POC-l} + RSP_{DOC-l} + RSP_{POC-r} + RSP_{DOC-r} + RSP_{nutr})
+$$
+$$
+P_{POC-l} - D_{POC-l} = 0.8 GPP - RSP_{POC-l} 
+$$
+$$
+P_{DOC-l} - D_{DOC-l} = (RSP_{POC-l} + 0.2 GPP) - RSP_{DOC-r} 
+$$
+$$
+P_{POC-r} - D_{POC-r} =  - RSP_{POC-r} 
+$$
+$$
+P_{DOC-r} - D_{DOC-r} = RSP_{POC-r} - RSP_{DOC-r} 
+$$
+
+$$
 P_{phyto} - D_{phyto} = G M_{phyto} - p_3 M_{phyto}  \theta_{GPP}^{T-20}
-</span> with <span class="math inline">p_3</span> as a grazing rate (d<sup>-1</sup>). <span class="math display">
+$$
+with $p_3$ as a grazing rate (d<sup>-1</sup>).
+$$
 P_{nutr} - D_{nutr} = p_3 p_4 M_{phyto} R_{molar}  \theta_{GPP}^{T-20} - RSP_{nutr}
-</span> with <span class="math inline">p_4</span> as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate).</p>
+$$
+with $p_4$ as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate).
+-->
+<p>This results in the following set of dependencies for production terms: <span class="math display">
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix} =
+\begin{bmatrix}
+0  &amp; 0 &amp; 0 &amp;0 &amp; 0 &amp; GPP &amp; 0 \\
+0  &amp; 0 &amp; 0 &amp; RSP_{POC-R}&amp; 0 &amp;0 &amp; 0\\
+0  &amp; 0 &amp; 0 &amp;0 &amp; RSP_{POC-L} &amp; \frac{1}{5}\frac{12}{32}GPP &amp; 0\\
+0  &amp; 0 &amp; 0 &amp;0 &amp; 0 &amp; 0 &amp; 0 \\
+0  &amp; 0 &amp; 0 &amp;0 &amp; 0 &amp; (1-\frac{1}{5})\frac{12}{32}GPP &amp; 0\\
+0  &amp; 0 &amp; 0 &amp;0 &amp; 0 &amp; G &amp; 0 \\
+0  &amp; 0 &amp; 0 &amp;0 &amp; 0 &amp; p_3 p_4 \theta_{GPP}^{T-20} &amp; 0
+\end{bmatrix}
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix}
+</span></p>
+<p>where <span class="math inline">p_3</span> as a grazing rate (s<sup>-1</sup>), and <span class="math inline">p_4</span> as the grazing ratio (hence, how much of the grazed material is converted from the grazer into nutrients, similar to an excretion rate). The destruction matrix has the following dependencies:</p>
+<p><span class="math display">
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix} =
+\begin{bmatrix}
+0  &amp; \frac{32}{12} RSP_{DOC-R} &amp; \frac{32}{12} RSP_{DOC-L} &amp;\frac{32}{12} RSP_{POC-R} &amp; \frac{32}{12} RSP_{POC-RL} &amp; 0 &amp; \frac{32}{12} RSP_{DOC-L} \\
+0  &amp; RSP_{DOC-R} &amp; 0 &amp; 0&amp; 0 &amp;0 &amp; 0\\
+0  &amp; 0 &amp; RSP_{DOC-L} &amp;0 &amp; 0 &amp; 0 &amp; 0\\
+0  &amp; 0 &amp; 0 &amp;RSP_{POC-R} &amp; 0 &amp; 0 &amp; 0 \\
+0  &amp; 0 &amp; 0 &amp;0 &amp; RSP_{POC-L} &amp;0 &amp; 0\\
+0  &amp; 0 &amp; 0 &amp;0 &amp; 0 &amp; p_3 \theta_{GPP}^{T-20} &amp; 0 \\
+0  &amp; 0 &amp; 0 &amp;0 &amp; 0 &amp; 0&amp; RSP_{DOC-L}
+\end{bmatrix}
+\begin{bmatrix}
+DO \\
+DOC-R \\
+DOC-L \\
+POC-R \\
+POC-L \\
+phyto \\
+nutr
+\end{bmatrix}
+</span></p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -380,7 +462,7 @@ P_{DOC-r} - D_{DOC-r} =  - RSP_{DOC-r}
 <p>For internal production and consumption fluxes, we applied the 2nd-order Modified Patankar-Runge-Kutta scheme, which is mass conservative and unconditionally positive (<span class="citation" data-cites="burchard_patankar_2003">Burchard, Deleersnijder, and Meister (<a href="#ref-burchard_patankar_2003" role="doc-biblioref">2003</a>)</span>): <span class="math display">
 C_i^{(1)}=C_i^n + \Delta t(\sum_{j=1}^I P_{i,j}(C^n) - \sum_{j=1}^I D_{i,j}(C^n) \frac{C_i^{(1)}}{C_i^n})
 </span> <span class="math display">
-C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
+C_i^{n+1} = C_i^n + \frac{\Delta t}{2} (\sum_{j=1}^I (P_{i,j}(C^n) + p_{P,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}} - \sum_{j=1}^I (D_{i,j}(C^n) + D_{i,j}(C^{(1)})) \frac{C_j^{n+1}}{C_j^{(1)}})
 </span> <span class="math display">
 \text{with } i = 1, ..., I
 </span> where <span class="math inline">i</span> determines the current water quality constituent, <span class="math inline">P</span> is a source term, and <span class="math inline">D</span> is a sink term.</p>
@@ -911,8 +993,8 @@ Burchard, Hans, Eric Deleersnijder, and Andreas Meister. 2003. <span>“A High-O
 <div id="ref-ford_thermal_1980" class="csl-entry" role="listitem">
 Ford, Dennis E, and Heinz G Stefan. 1980. <span>“Thermal Predictions Using Integral Energy Model.”</span> <em>Journal of the Hydraulics Division</em> 106 (1): 39–55. <a href="https://doi.org/10.1061/JYCEAJ.0005358">https://doi.org/10.1061/JYCEAJ.0005358</a>.
 </div>
-<div id="ref-goudsmit_application_2002_epsilon" class="csl-entry" role="listitem">
-Goudsmit, G.-H., H. Burchard, F. Peeters, and A. Wüest. 2002. <span>“Application of <span class="nocase">k-</span> Turbulence Models to Enclosed Basins: <span>The</span> Role of Internal Seiches.”</span> <em>Journal of Geophysical Research: Oceans</em> 107 (C12): 23-1-23-13. <a href="https://doi.org/10.1029/2001JC000954">https://doi.org/10.1029/2001JC000954</a>.
+<div id="ref-goudsmit_application_2002" class="csl-entry" role="listitem">
+Goudsmit, G.-H., H. Burchard, F. Peeters, and A. Wüest. 2002. <span>“Application of k-$<span>\</span>Epsilon$ Turbulence Models to Enclosed Basins: <span>The</span> Role of Internal Seiches.”</span> <em>Journal of Geophysical Research: Oceans</em> 107 (C12): 23-1-23-13. <a href="https://doi.org/10.1029/2001JC000954">https://doi.org/10.1029/2001JC000954</a>.
 </div>
 <div id="ref-han_oxygen_1996" class="csl-entry" role="listitem">
 Han, Ping, and David M. Bartels. 1996. <span>“Temperature Dependence of Oxygen Diffusion in H2O and D2O.”</span> <em>J. Phys. Chem.</em> 100 (13): 5597–5602. https://doi.org/<a href="https://doi.org/10.1021/jp952903y">https://doi.org/10.1021/jp952903y</a>.

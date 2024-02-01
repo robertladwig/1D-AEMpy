@@ -994,7 +994,7 @@ def diffusion_module(
     u = un
     dens_u_n2 = calc_dens(un)
     
-    kz = kzn
+    kz = kzn  #* 10**(-9)
     
     ## (2) DIFFUSION
     # if diffusion_method == 'hendersonSellers':
@@ -1016,10 +1016,21 @@ def diffusion_module(
 
         #kzn = kzn * 0+1e-5
         
+        # area_diff = np.ones(len(depth))
+        # area_diff[:-1] = np.abs(area[1:] - area[:-1]) / (depth[1:] - depth[:-1]) 
+        # area_diff[-1] = area_diff[-2]
+        
+        # kzn_diff = np.ones(len(depth))
+        # kzn_diff[:-1] = np.abs(kzn[1:] - kzn[:-1]) / (depth[1:] - depth[:-1]) 
+        # kzn_diff[-1] = kzn_diff[-2]
+        
+        
+        #alpha = (area * kzn * dt) / (dx**2)
+        
         alpha = (area * kzn * dt) / (dx**2)
         
         az = - alpha/2 # subdiagonal
-        bz = (area + alpha) #(area + 2 * alpha) # diagonal
+        bz = (area + alpha)#(area + alpha) #(area + 2 * alpha) # diagonal
         cz = - alpha/2 # superdiagonal
         
         bz[0] = 1
@@ -1044,20 +1055,20 @@ def diffusion_module(
         mn[0] = un[0]
         mn[-1] = un[-1]
         
-        #bz_old = (area + alpha)
-        #y[0, 0] = bz_old[0]
-        #y[j-1, j-1] = bz_old[len(bz_old)-1] 
-        #y[0, 1] = -alpha[0] 
-        #y[j-1, j-2] = -alpha[len(alpha)-1]
+        # bz_old = (area + alpha)#(area + alpha)
+        # y[0, 0] = bz_old[0]
+        # y[j-1, j-1] = bz_old[len(bz_old)-1] 
+        # y[0, 1] = -alpha[0] 
+        # y[j-1, j-2] = -alpha[len(alpha)-1]
 
-        #mn[0] = (area[0] - alpha[0])  * un[0] + alpha[0+1] * un[0+1]
-        #mn[-1] = (area[-1] - alpha[-1])  * un[-1] + alpha[-1 -1] * un[-1-1]
+        # mn[0] = (area[0] - alpha[0])  * un[0] + alpha[0+1] * un[0+1]
+        # mn[-1] = (area[-1] - alpha[-1])  * un[-1] + alpha[-1 -1] * un[-1-1]
         
         #mn[0] = (1- 2 * alpha[0])  * un[0] + 2* alpha[0+1] * un[0+1]
         #mn[-1] = (1 - 2 * alpha[-1])  * un[-1] + 2* alpha[-1 -1] * un[-1-1]
         
         
-        #breakpoint()
+        # breakpoint()
         # https://mathonweb.com/resources/book4/Heat-Equation.pdf 
         
         for k in range(1,j-1):
@@ -1417,7 +1428,7 @@ def mixing_module_minlake(
     while WmixIndicator == 1:
         #breakpoint()
         rho = calc_dens(u)
-        d_rho = (rho[1:] - rho[:-1]) 
+        d_rho = (rho[1:] - rho[:-1])  / (depth[1:] - depth[:-1]) # RL! BIG CHANGE
         inx = np.where(d_rho > 0.0)
         MLD = 0
         
@@ -1430,15 +1441,22 @@ def mixing_module_minlake(
         if zb == (len(d_rho) -1):
             break
         MLD = depth[zb]
+
         dD = d_rho[zb]
         
+        #breakpoint()
         Zg = sum(area[0:(zb+2)] *depth[0:(zb+2)]) / sum(area[0:(zb+2)] )
+        
         if zb==0:
             volume_epi = volume[0]
         else:
-            volume_epi = sum(volume[0:zb]) 
-        V_weight = volume[zb+2] *volume_epi / (volume[zb+2] + volume_epi) 
+            volume_epi = sum(volume[0:(zb+1)]) # 0:zb   RL!
+        #V_weight = volume[zb+2] *volume_epi / (volume[zb+2] + volume_epi)  RL!
+        V_weight = volume[zb+1] *volume_epi / (volume[zb+1] + volume_epi) 
+        
         POE = (dD * g * V_weight * (MLD + dx/2 - Zg))
+        #print(POE)
+        #breakpoint()
         
         
 
@@ -1464,51 +1482,267 @@ def mixing_module_minlake(
             alg[0:(zb+2)] = algmix
             nutr[0:(zb+2)] = nutrmix
     
-            
+            print(KE)
             KE = KE - POE
+            print(KE)
+            print(POE)
+            print(Tmix)
+            print(zb)
+            print(MLD)
+            breakpoint()
         else:
             #breakpoint()
             volume_res = volume[0:(zb+1)]
-            volume_res = np.append(volume_res, KP_ratio * volume[(zb+2)])
+            volume_res = np.append(volume_res, KP_ratio * volume[(zb+1)]) # volume[(zb+2)]) RL!
             temp_res = u[0:(zb+2)]
             Tmix = sum(volume_res * temp_res) / sum(volume_res)
             u[0:(zb +1)] = Tmix
-            u[(zb +2)] = KP_ratio * Tmix + (1 - KP_ratio) *u[zb+2]
+            u[(zb +1)] = KP_ratio * Tmix + (1 - KP_ratio) *u[zb+1] # u[zb+2] RL!
             
             o2_res = o2[0:(zb+2)]
             o2mix = sum(volume_res * o2_res) / sum(volume_res)
             o2[0:(zb +1)] = o2mix
-            o2[(zb +2)] = KP_ratio * o2mix + (1 - KP_ratio) *o2[zb+2]
+            o2[(zb +1)] = KP_ratio * o2mix + (1 - KP_ratio) *o2[zb+1]
             
             docl_res = docl[0:(zb+2)]
             doclmix = sum(volume_res * docl_res) / sum(volume_res)
             docl[0:(zb +1)] = doclmix
-            docl[(zb +2)] = KP_ratio * doclmix + (1 - KP_ratio) *docl[zb+2]
+            docl[(zb +1)] = KP_ratio * doclmix + (1 - KP_ratio) *docl[zb+1]
             
             docr_res = docr[0:(zb+2)]
             docrmix = sum(volume_res * docr_res) / sum(volume_res)
             docr[0:(zb +1)] = docrmix
-            docr[(zb +2)] = KP_ratio * docrmix + (1 - KP_ratio) *docr[zb+2]
+            docr[(zb +1)] = KP_ratio * docrmix + (1 - KP_ratio) *docr[zb+1]
             
             pocl_res = pocl[0:(zb+2)]
             poclmix = sum(volume_res * pocl_res) / sum(volume_res)
             pocl[0:(zb +1)] = poclmix
-            pocl[(zb +2)] = KP_ratio * poclmix + (1 - KP_ratio) *pocl[zb+2]
+            pocl[(zb +1)] = KP_ratio * poclmix + (1 - KP_ratio) *pocl[zb+1]
             
             pocr_res = pocr[0:(zb+2)]
             pocrmix = sum(volume_res * pocr_res) / sum(volume_res)
             pocr[0:(zb +1)] = pocrmix
-            pocr[(zb +2)] = KP_ratio * pocrmix + (1 - KP_ratio) *pocr[zb+2]
+            pocr[(zb +1)] = KP_ratio * pocrmix + (1 - KP_ratio) *pocr[zb+1]
             
             alg_res = alg[0:(zb+2)]
             algmix = sum(volume_res * alg_res) / sum(volume_res)
             alg[0:(zb +1)] = algmix
-            alg[(zb +2)] = KP_ratio * algmix + (1 - KP_ratio) *alg[zb+2]
+            alg[(zb +1)] = KP_ratio * algmix + (1 - KP_ratio) *alg[zb+1]
             
             nutr_res = nutr[0:(zb+2)]
             nutrmix = sum(volume_res * nutr_res) / sum(volume_res)
             nutr[0:(zb +1)] = nutrmix
-            nutr[(zb +2)] = KP_ratio * nutrmix + (1 - KP_ratio) *nutr[zb+2]
+            nutr[(zb +1)] = KP_ratio * nutrmix + (1 - KP_ratio) *nutr[zb+1]
+            
+            KE = 0
+            WmixIndicator = 0
+        #print(KE)
+        plt.plot(u)
+            
+    # epi_dens = np.mean(calc_dens(u[0:idx]))
+    # layer_dens = calc_dens(u[idx])
+    # delta_dens =  (layer_dens - epi_dens) 
+    # epi_volume = sum(volume[0:idx])
+    # layer_volume = volume[idx]
+    # volume_ratio = ((epi_volume * layer_volume)/(epi_volume + layer_volume))
+    # epi_zg = (np.matmul(area[0:idx], depth[0:idx]) * calc_dens(u[0:idx])) / (sum(area[0:idx]) *calc_dens(u[0:idx])) 
+    # delta_depth = meta_top + (depth[idx] - meta_top) -  epi_zg[0]
+    # PE = g *delta_dens * volume_ratio * (delta_depth)
+    
+    
+    o2 =o2*volume
+    docl =docl*volume
+    docr =docr*volume
+    pocl =pocl*volume
+    pocr = pocr*volume 
+    alg =alg*volume
+    nutr = nutr*volume
+
+    
+    energy_ratio = MLD
+    
+    end_time = datetime.datetime.now()
+    print("mixing: " + str(end_time - start_time))
+    
+    dat = {'temp': u,
+           'o2': o2,
+           'docr': docr,
+           'docl': docl,
+           'pocr': pocr,
+           'pocl':pocl,
+           'alg': alg,
+           'nutr': nutr,
+           'tau': tau,
+           'thermo_dep': zb,
+           'energy_ratio': energy_ratio}
+    
+    return dat
+    
+def mixing_module_minlake_bugfix(
+        un,
+        o2n,
+        docln,
+        docrn,
+        pocln,
+        pocrn,
+        algn,
+        nutrn,
+        depth,
+        area,
+        volume,
+        dx,
+        dt,
+        nx,
+        Uw,
+        ice,
+        g = 9.81,
+        Cd = 0.0013,
+        KEice = 1/1000,
+        W_str = None):
+    
+    u = un
+    start_time = datetime.datetime.now()
+    
+    
+    if W_str is None:
+        W_str = 1.0 - exp(-0.3 * max(area/10**6))
+    else:
+        W_str = W_str
+    tau = 1.225 * Cd * Uw ** 2 # wind shear is air density times wind velocity 
+    
+    KE = W_str * max(area) * sqrt(tau**3/ calc_dens(u[0]) ) * dt
+    
+    #meta_top, meta_bot, thermD = meta_depths(un = u,
+    #                          depth = depth,area = area, volume = volume, dx = dx, dt = dt, nx = nx)
+    
+    if ice:
+        KE = 0.0
+    
+    o2 =o2n/volume
+    docl =docln/volume
+    docr =docrn/volume
+    pocl =pocln/volume
+    pocr = pocrn/volume
+    alg = algn/volume
+    nutr = nutrn/volume
+    
+    o2n =o2n/volume
+    docln =docln/volume
+    docrn =docrn/volume
+    pocln =pocln/volume
+    pocrn = pocrn/volume
+    algn = algn/volume
+    nutrn = nutrn/volume
+    
+
+    #idx = np.where(depth > thermD)
+    #idx = idx[0][0]
+    
+    #breakpoint()
+    zb = 0
+    WmixIndicator = 1
+    while WmixIndicator == 1:
+        #breakpoint()
+        rho = calc_dens(u)
+        d_rho = (rho[1:] - rho[:-1]) 
+        inx = np.where(d_rho > 0.0)
+        MLD = 0
+        
+        inx_array = np.array(inx)
+        if inx_array.size == 0:
+            break
+        #print(inx)
+        zb = int(inx[0][0])
+        
+        if zb == (len(d_rho) -1):
+            break
+        MLD = depth[zb]
+
+        dD = d_rho[zb]
+        
+        #breakpoint()
+        Zg = sum(area[0:(zb+1)] *depth[0:(zb+1)]) / sum(area[0:(zb+1)] )
+        
+        if zb==0:
+            volume_epi = volume[0]
+        else:
+            volume_epi = sum(volume[0:zb]) 
+        V_weight = volume[zb+1] *volume_epi / (volume[zb+1] + volume_epi) 
+
+        POE = (dD * g * V_weight * (MLD + dx/2 - Zg))
+        #print(POE)
+        
+        
+
+        KP_ratio = KE/POE
+        if KP_ratio > 1:
+            Tmix = sum((volume[0:(zb+1)] * u[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            #sum((volume[0:(zb+2)] * u[0:(zb+2)])) / sum(volume[0:(zb+2)])
+            u[0:(zb+1)] = Tmix
+            #breakpoint()
+            
+            o2mix = sum((volume[0:(zb+1)] * o2[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            docrmix = sum((volume[0:(zb+1)] * docr[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            doclmix = sum((volume[0:(zb+1)] * docl[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            pocrmix = sum((volume[0:(zb+1)] * pocr[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            poclmix = sum((volume[0:(zb+1)] * pocl[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            algmix = sum((volume[0:(zb+1)] * alg[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            nutrmix = sum((volume[0:(zb+1)] * nutr[0:(zb+1)])) / sum(volume[0:(zb+1)])
+            
+            #breakpoint()
+            o2[0:(zb+1)] = o2mix
+            docr[0:(zb+1)] = docrmix
+            docl[0:(zb+1)] = doclmix
+            pocr[0:(zb+1)] = pocrmix
+            pocl[0:(zb+1)] = poclmix
+            alg[0:(zb+1)] = algmix
+            nutr[0:(zb+1)] = nutrmix
+    
+            
+            KE = KE - POE
+        else:
+            #breakpoint()
+            volume_res = volume[0:(zb)]
+            volume_res = np.append(volume_res, KP_ratio * volume[(zb+1)])
+            temp_res = u[0:(zb+1)]
+            Tmix = sum(volume_res * temp_res) / sum(volume_res)
+            u[0:(zb +1)] = Tmix
+            u[(zb +1)] = KP_ratio * Tmix + (1 - KP_ratio) *u[zb+1]
+            
+            o2_res = o2[0:(zb+1)]
+            o2mix = sum(volume_res * o2_res) / sum(volume_res)
+            o2[0:(zb +1)] = o2mix
+            o2[(zb +1)] = KP_ratio * o2mix + (1 - KP_ratio) *o2[zb+1]
+            
+            docl_res = docl[0:(zb+1)]
+            doclmix = sum(volume_res * docl_res) / sum(volume_res)
+            docl[0:(zb +1)] = doclmix
+            docl[(zb +1)] = KP_ratio * doclmix + (1 - KP_ratio) *docl[zb+1]
+            
+            docr_res = docr[0:(zb+1)]
+            docrmix = sum(volume_res * docr_res) / sum(volume_res)
+            docr[0:(zb +1)] = docrmix
+            docr[(zb +1)] = KP_ratio * docrmix + (1 - KP_ratio) *docr[zb+1]
+            
+            pocl_res = pocl[0:(zb+1)]
+            poclmix = sum(volume_res * pocl_res) / sum(volume_res)
+            pocl[0:(zb +1)] = poclmix
+            pocl[(zb +1)] = KP_ratio * poclmix + (1 - KP_ratio) *pocl[zb+1]
+            
+            pocr_res = pocr[0:(zb+1)]
+            pocrmix = sum(volume_res * pocr_res) / sum(volume_res)
+            pocr[0:(zb +1)] = pocrmix
+            pocr[(zb +1)] = KP_ratio * pocrmix + (1 - KP_ratio) *pocr[zb+1]
+            
+            alg_res = alg[0:(zb+1)]
+            algmix = sum(volume_res * alg_res) / sum(volume_res)
+            alg[0:(zb +1)] = algmix
+            alg[(zb +1)] = KP_ratio * algmix + (1 - KP_ratio) *alg[zb+1]
+            
+            nutr_res = nutr[0:(zb+1)]
+            nutrmix = sum(volume_res * nutr_res) / sum(volume_res)
+            nutr[0:(zb +1)] = nutrmix
+            nutr[(zb +1)] = KP_ratio * nutrmix + (1 - KP_ratio) *nutr[zb+1]
             
             KE = 0
             WmixIndicator = 0
@@ -1552,7 +1786,6 @@ def mixing_module_minlake(
            'energy_ratio': energy_ratio}
     
     return dat
-    
 def convection_module(
         un,
         nx,
@@ -1780,6 +2013,7 @@ def boundary_module(
         pocln,
         pocrn,
         nutrn,
+        algn,
         area,
         volume,
         depth,
@@ -1801,6 +2035,7 @@ def boundary_module(
         pocl_inflow,
         pocr_inflow,
         tp_inflow,
+        alg_inflow,
         Hi = 0,
         kd_snow = 0.9,
         rho_fw = 1000,
@@ -1842,9 +2077,7 @@ def boundary_module(
     # surface heat flux
     start_time = datetime.datetime.now()
     
-    Tair = Tair * at_factor
-    Jsw = Jsw * sw_factor
-    Uw = Uw * wind_factor
+    
     
     u = un
     o2 = o2n
@@ -1852,6 +2085,7 @@ def boundary_module(
     docl = docln
     pocr = pocrn
     pocl = pocln
+    alg = algn
 
     # light attenuation
     
@@ -1880,13 +2114,16 @@ def boundary_module(
 
     nutr = nutrn
 
-    nutrn[0] = nutrn[0] + dt * tp_inflow 
+    nutrn[0] = nutrn[0] + dt * tp_inflow * 1.2**(u[0]-20)
     nutr = nutrn #+ dt * npp * (0.0)
     
-    pocrn[0] = pocrn[0] + dt * pocr_inflow 
+    algn[0] = algn[0] + dt * alg_inflow  * 1.2**(u[0]-20)
+    alg = algn #+ dt * npp * (0.0)
+    
+    pocrn[0] = pocrn[0] + dt * pocr_inflow  * 1.2**(u[0]-20)
     pocr = pocrn #+ dt * npp * (0.0)
     
-    pocln[0] = pocln[0]  +  dt * pocl_inflow
+    pocln[0] = pocln[0]  +  dt * pocl_inflow * 1.2**(u[0]-20)
     pocl = pocln #+ dt * npp * (0.8)
     
     #breakpoint()
@@ -1897,7 +2134,7 @@ def boundary_module(
 
     #breakpoint()
     o2[0] = (o2[0] +  # m/s g/m3 m2   m/s g/m3 m2 s
-        (piston_velocity * (do_sat_calc(u[0], 982.2, altitude = 258) - o2[0]/volume[0]) * area[0] ) * dt)
+        ( piston_velocity * (do_sat_calc(u[0], 982.2, altitude = 258) - o2[0]/volume[0]) * area[0] ) * dt)
     
     nutr[(nx-1)] = nutr[(nx-1)] + (theta_r**(u[(nx-1)] - 20) * sed_sink * area[nx-1] * o2[nx-1]/volume[nx-1]/(k_half +  o2[nx-1]/volume[nx-1])) * dt
 
@@ -1922,6 +2159,7 @@ def boundary_module(
            'pocr': pocr,
            'pocl':pocl,
            'nutr':nutr,
+           'alg':alg,
            'npp': npp}
 
     
@@ -1984,7 +2222,10 @@ def prodcons_module(
         piston_velocity = 1.0,
         sw_to_par = 2.114,
         growth_rate = 1.1,
-        grazing_ratio = 0.1): 
+        grazing_ratio = 0.1,
+        alpha_gpp = 0.1/3600,
+        beta_gpp = 4.2/3600,
+        o2_to_chla = 41.5/3600): 
 
     
     ## (1) HEAT ADDITION
@@ -2024,6 +2265,8 @@ def prodcons_module(
     #breakpoint()
     if ice:
         piston_velocity = 1e-5 / 86400
+        #k600 =  k_vachon(wind = Uw, area = area[0])
+        #piston_velocity = k600_to_kgas(k600 = k600, temperature = Tair, gas = "O2")/86400
         IP_m = IP / 10
     else:
         #breakpoint()
@@ -2037,19 +2280,19 @@ def prodcons_module(
     def fun(y, a, consumption, npp, growth, temp):
         #"Production and destruction term for a simple linear model."
         o2n, docrn, docln, pocrn, pocln, algn, nutrn, = y
-        resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate,grazing_ratio = a
+        resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate,grazing_ratio, alpha_gpp, beta_gpp, o2_to_chla = a
         consumption = consumption.item()
-        npp = npp.item()
+        npp = npp # npp.item()
         growth = growth.item()
         temp =temp.item()
-        p = [[0, 0, 0, 0, 0, algn * npp * 32/12, 0], # O2 1
+        p = [[0, 0, 0, 0, 0, algn * npp, 0], # O2 1   [[0, 0, 0, 0, 0, algn * npp * 32/12, 0],
          [0, 0, 0,  (pocrn * resp_pocr * consumption), 0, 0, 0], # DOC-R 2
-         [0, 0, 0, 0, (pocln * resp_pocl * consumption), algn * ((npp * 0.2) ), 0], # DOC-L 3
+         [0, 0, 0, 0, (pocln * resp_pocl * consumption), algn * ((npp * 0.2) ) * 12/32, 0], # DOC-L 3
          [0, 0, 0, 0, 0, 0, 0], # POC-R 4
-         [0, 0, 0, 0, 0, algn * npp * (0.8), 0], # POC-L 5
+         [0, 0, 0, 0, 0, algn * npp * (0.8) * 12/32, 0], # POC-L 5
          [0, 0, 0, 0, 0, growth * algn, 0],
          [0, 0, 0, 0, 0, grazing_ratio *grazing_rate * algn * temp * 31/12, 0]]
-        d = [[0, 32/12 * (docrn * resp_docr * consumption), 32/12 *(docln * resp_docl * consumption), 32/12 * (pocrn * resp_pocr * consumption), 32/12 * (pocln * resp_pocl * consumption), 0, 32/31 * (nutrn * resp_docl * consumption)],
+        d = [[0, 32/12 * (docrn * resp_docr * consumption), 32/12 *(docln * resp_docl * consumption), 32/12 * (pocrn * resp_pocr * consumption), 32/12 * (pocln * resp_pocl * consumption), 0, 32/12 * (nutrn * resp_docl * consumption)],
          [0, (docrn * resp_docr * consumption), 0, 0, 0, 0, 0],
          [0, 0, (docln * resp_docl * consumption), 0, 0, 0, 0 ],
          [0, 0, 0, (pocrn * resp_pocr * consumption), 0, 0, 0],
@@ -2071,11 +2314,21 @@ def prodcons_module(
         r = np.zeros_like(a[:, 0], dtype=float)
         
         consumption =  theta_r**(u-20) * (y[0]/volume)/(k_half +  y[0]/volume)
-        npp = 1 * H * sw_to_par * IP_m * y[6]/volume  * theta_npp**(u - 20) #* volume #* (y[4]/volume)/(0.1 +  y[4]/volume)
         
+        npp = 1 * H * sw_to_par * IP_m * y[6]/volume  * theta_npp**(u - 20) #* volume #* (y[4]/volume)/(0.1 +  y[4]/volume)
         growth = resp[5] *  H * sw_to_par *  theta_npp**(u - 20)  * (y[6]/volume)/(k_half +  y[6]/volume)
+        
+        npp = (1 - exp(-(resp[7]*H * sw_to_par) /  resp[5] )) * exp(- (resp[8] * H*sw_to_par)/  resp[5] ) * resp[9] * theta_npp**(u - 20)
+        growth = resp[5] * npp / resp[9] *  theta_npp**(u - 20)  * (y[6]/volume)/(k_half +  y[6]/volume)
+        growth = resp[5] *  theta_npp**(u - 20)  * (y[6]/volume)/(k_half +  y[6]/volume)
+        
+        # print(npp)
+        #print(growth)
         #breakpoint()
-        temp =  theta_npp**(u - 20)
+        # if H > 0:
+        #     breakpoint()
+            
+        temp =  theta_npp**(u - 20)  * (y[6]/volume)/(k_half +  y[6]/volume)
         #if H> 0:
             
         #breakpoint() 
@@ -2123,7 +2376,7 @@ def prodcons_module(
         y = np.linalg.solve(a, r)
         # breakpoint()
         return [y, 86400 * resp[0] * consumption, 86400 * resp[1] * consumption, 86400 * resp[2] * consumption, 86400 * resp[3] * consumption,
-                npp * 86400, growth *86400]
+                npp * 86400, growth *86400, resp[4] *temp * 86400]
 
     docr_respiration = o2 * 0.0
     docl_respiration = o2 * 0.0
@@ -2131,15 +2384,16 @@ def prodcons_module(
     pocl_respiration = o2 * 0.0
     npp_production = o2 * 0.0
     algae_growth = o2 * 0.0
+    algae_grazing = o2 * 0.0
     
     
     for dep in range(0, nx-1):
         mprk_res = solve_mprk(fun, y0 =  [o2n[dep], docrn[dep], docln[dep], pocrn[dep], pocln[dep], algn[dep], nutrn[dep]], dt = dt, 
-               resp = [resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate, grazing_ratio], theta_r = theta_r, u = u[dep],
+               resp = [resp_docr, resp_docl, resp_pocr, resp_pocl, grazing_rate, growth_rate, grazing_ratio, alpha_gpp, beta_gpp, o2_to_chla], theta_r = theta_r, u = u[dep],
                volume = volume[dep], k_half = k_half,
                H = H[dep], sw_to_par = sw_to_par, IP_m = IP_m, TP = TP, theta_npp = theta_npp)
         o2[dep], docr[dep], docl[dep], pocr[dep], pocl[dep], alg[dep], nutr[dep] = mprk_res[0]
-        docr_respiration[dep], docl_respiration[dep], pocr_respiration[dep], pocl_respiration[dep], npp_production[dep], algae_growth[dep] = [mprk_res[1], mprk_res[2], mprk_res[3], mprk_res[4], mprk_res[5], mprk_res[6]]
+        docr_respiration[dep], docl_respiration[dep], pocr_respiration[dep], pocl_respiration[dep], npp_production[dep], algae_growth[dep], algae_grazing[dep] = [mprk_res[1], mprk_res[2], mprk_res[3], mprk_res[4], mprk_res[5], mprk_res[6], mprk_res[7]]
 
     
     # breakpoint()
@@ -2164,7 +2418,8 @@ def prodcons_module(
            'pocr_respiration': pocr_respiration,
            'pocl_respiration': pocl_respiration,
            'npp_production': npp_production,
-           'algae_growth': algae_growth}
+           'algae_growth': algae_growth,
+           'algae_grazing': algae_grazing}
 
     
     return dat
@@ -2270,7 +2525,7 @@ def transport_module(
             mn[k] = alpha[k] * un[k-1] + (area[k] - 2 * alpha[k]) * un[k] + alpha[k] * un[k+1]
 
     # DERIVED TEMPERATURE OUTPUT FOR NEXT MODULE
-        u = np.linalg.solve(y, mn)
+        #u = np.linalg.solve(y, mn)
 
         mn = o2n * 0.0    
         mn[0] = o2n[0]
@@ -2312,23 +2567,29 @@ def transport_module(
             mn[k] = alpha[k] * nutrn[k-1] + (area[k] - 2 * alpha[k]) * nutrn[k] + alpha[k] * nutrn[k+1]
         nutr = np.linalg.solve(y, mn) * volume
         
-   
+    diff_area = (area[:-1] - area[1:])
+    diff_area = np.append(diff_area, (area[nx-2] - area[nx-1] + area[nx-1]) * 100)
     #breakpoint()
+    
     sinking_loss_pocl = pocln *  pocl_settling_rate/dx
     pocl[:-1] = pocln[:-1] - dt * sinking_loss_pocl[:-1]
     pocl[1:] = pocl[1:] + dt * sinking_loss_pocl[:-1]
-    pocl[(nx-1)] = pocl[(nx-1)] - dt * pocl[(nx-1)] * sediment_rate/dx
+    pocl = pocl - dt * pocl *sediment_rate*dx/diff_area
+    #pocl[(nx-1)] = pocl[(nx-1)] - dt * pocl[(nx-1)] * sediment_rate/dx
     
+    #breakpoint()
     sinking_loss_pocr = pocrn *  pocr_settling_rate/dx
     pocr[:-1] = pocrn[:-1] - dt * sinking_loss_pocr[:-1]
     pocr[1:] = pocr[1:] + dt * sinking_loss_pocr[:-1]
-    pocr[(nx-1)] = pocr[(nx-1)] - dt * pocr[(nx-1)] * sediment_rate/dx
+    pocr = pocr - dt * pocr *sediment_rate*dx/diff_area
+    #pocr[(nx-1)] = pocr[(nx-1)] - dt * pocr[(nx-1)] * sediment_rate/dx
     
     algn = alg 
     sinking_loss_alg = algn *  algae_settling_rate/dx
     alg[:-1] = algn[:-1] - dt * sinking_loss_alg[:-1]
     alg[1:] = alg[1:] + dt * sinking_loss_alg[:-1]
-    alg[(nx-1)] = alg[(nx-1)] - dt * alg[(nx-1)] * sediment_rate/dx
+    alg = alg - dt * alg *sediment_rate*dx/diff_area
+    #alg[(nx-1)] = alg[(nx-1)] - dt * alg[(nx-1)] * sediment_rate/dx
     
     #breakpoint()
     
@@ -2388,10 +2649,12 @@ def run_wq_model(
   pocl_inflow,
   pocr_inflow,
   tp_inflow,
+  alg_inflow,
   ice=False,
   Hi=0,
   iceT=6,
   supercooled=0,
+  coupled = 'on',
   diffusion_method = 'hendersonSellers',
   scheme='implicit',
   km = 1.4 * 10**(-7),
@@ -2452,7 +2715,10 @@ def run_wq_model(
   f_sod = 1e-2,
   d_thick = 0.001,
   growth_rate = 1.1,
-  grazing_ratio = 0.1):
+  grazing_ratio = 0.1,
+  alpha_gpp = 0.1/3600,
+  beta_gpp = 4.2/3600,
+  o2_to_chla = 41.5/3600):
     
   ## linearization of driver data, so model can have dynamic step
   Jsw_fillvals = tuple(daily_meteo.Shortwave_Radiation_Downwelling_wattPerMeterSquared.values[[0, -1]])
@@ -2551,16 +2817,23 @@ def run_wq_model(
   pocl_respirationm = np.full([nx, nCol], np.nan)
   
   algae_growthm = np.full([nx, nCol], np.nan)
+  algae_grazingm = np.full([nx, nCol], np.nan)
   
   if not kd_light is None:
     def kd(n): # using this shortcut for now / testing if it works
       return kd_light
 
   
+  
   #breakpoint()
   #times = np.arange(startTime, endTime, dt)
   times = np.arange(startTime * dt, endTime * dt, dt)
   for idn, n in enumerate(times):
+    
+      
+    Tair_n = Tair(n) * at_factor
+    Jsw_n = Jsw(n) * sw_factor
+    Uw_n = Uw(n) * wind_factor
     
     print(idn)
           
@@ -2571,10 +2844,13 @@ def run_wq_model(
     depth_limit = mean_depth
     # depth_limit = 1
     
-    sum_doc = (docr[depth < depth_limit] + docl[depth < depth_limit] + alg[depth < depth_limit] +nutr[depth < depth_limit] )/volume[depth < depth_limit] 
+    sum_doc = (docr[depth < depth_limit] + docl[depth < depth_limit] + alg[depth < depth_limit])/volume[depth < depth_limit]# +nutr[depth < depth_limit] )/volume[depth < depth_limit] 
     sum_poc = (pocr[depth < depth_limit]  + pocl[depth < depth_limit] )/volume[depth < depth_limit] 
-    kd_light = light_water +  light_doc * np.mean(sum_doc) + light_poc * np.mean(sum_poc)
     
+    if coupled == 'on':
+        kd_light = light_water +  light_doc * np.mean(sum_doc) + light_poc * np.mean(sum_poc)
+    else:
+        kd_light = kd_light
 
     time_ind = np.where(times == n)
     
@@ -2599,12 +2875,12 @@ def run_wq_model(
         dx = dx,
         ice = ice,
         kd_ice = kd_ice,
-        Tair = Tair(n),
+        Tair = Tair_n,
         CC = CC(n),
         ea = ea(n),
-        Jsw = Jsw(n),
+        Jsw = Jsw_n,
         Jlw = Jlw(n),
-        Uw = Uw(n),
+        Uw = Uw_n,
         Pa= Pa(n),
         RH = RH(n),
         kd_light = kd_light,
@@ -2628,12 +2904,12 @@ def run_wq_model(
         dt = dt,
         dx = dx,
         area = area,
-        Tair = Tair(n),
+        Tair = Tair_n,
         CC = CC(n),
         ea = ea(n),
-        Jsw = Jsw(n),
+        Jsw = Jsw_n,
         Jlw = Jlw(n),
-        Uw = Uw(n),
+        Uw = Uw_n,
         Pa= Pa(n),
         RH = RH(n),
         PP = PP(n),
@@ -2669,20 +2945,20 @@ def run_wq_model(
         kz = u * 0.0
         
     if diffusion_method == 'hendersonSellers':
-        kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+        kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
     elif diffusion_method == 'munkAnderson':
-        kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, Cd, u, kz) / 1
+        kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, Cd, u, kz) / 1
     elif diffusion_method == 'hondzoStefan':
         kz = eddy_diffusivity(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, u, kz) / 86400
     elif diffusion_method == 'pacanowskiPhilander':
-        kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+        kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
     
     
     ## (2) DIFFUSION
     diffusion_res = diffusion_module(
         un = u,
         kzn = kz,
-        Uw = Uw(n),
+        Uw = Uw_n,
         depth= depth,
         dx = dx,
         area = area,
@@ -2710,6 +2986,7 @@ def run_wq_model(
         pocrn = pocr,
         pocln = pocl,
         nutrn = nutr,
+        algn = alg,
         area = area,
         volume = volume,
         depth = depth, 
@@ -2718,12 +2995,12 @@ def run_wq_model(
         dx = dx,
         ice = ice,
         kd_ice = kd_ice,
-        Tair = Tair(n),
+        Tair = Tair_n,
         CC = CC(n),
         ea = ea(n),
-        Jsw = Jsw(n),
+        Jsw = Jsw_n,
         Jlw = Jlw(n),
-        Uw = Uw(n),
+        Uw = Uw_n,
         Pa= Pa(n),
         RH = RH(n),
         kd_light = kd_light,
@@ -2746,6 +3023,7 @@ def run_wq_model(
         pocl_inflow = pocl_inflow,
         pocr_inflow = pocr_inflow,
         tp_inflow = tp_inflow,
+        alg_inflow = alg_inflow,
         f_sod = f_sod,
         d_thick = d_thick)
     
@@ -2754,6 +3032,7 @@ def run_wq_model(
     docl = boundary_res['docl']
     pocr = boundary_res['pocr']
     pocl = boundary_res['pocl']
+    alg = boundary_res['alg']
     nutr = boundary_res['nutr']
     npp = boundary_res['npp']
 
@@ -2802,12 +3081,12 @@ def run_wq_model(
         grazing_rate = grazing_rate,
         ice = ice,
         kd_ice = kd_ice,
-        Tair = Tair(n),
+        Tair = Tair_n,
         CC = CC(n),
         ea = ea(n),
-        Jsw = Jsw(n),
+        Jsw = Jsw_n,
         Jlw = Jlw(n),
-        Uw = Uw(n),
+        Uw = Uw_n,
         Pa= Pa(n),
         RH = RH(n),
         kd_light = kd_light,
@@ -2826,7 +3105,10 @@ def run_wq_model(
         sed_sink = sed_sink,
         piston_velocity = piston_velocity, 
         growth_rate = growth_rate, 
-        grazing_ratio = grazing_ratio)
+        grazing_ratio = grazing_ratio,
+        alpha_gpp = alpha_gpp,
+        beta_gpp = beta_gpp,
+        o2_to_chla = o2_to_chla)
     
     o2 = prodcons_res['o2']
     docr = prodcons_res['docr']
@@ -2841,6 +3123,7 @@ def run_wq_model(
     pocl_respiration = prodcons_res['pocl_respiration']
     npp_production = prodcons_res['npp_production']
     algae_growth = prodcons_res['algae_growth']
+    algae_grazing = prodcons_res['algae_grazing']
 
     o2_pd[:, idn] = o2
     docr_pd[:, idn] = docr
@@ -2857,6 +3140,7 @@ def run_wq_model(
     pocl_respirationm[:, idn] = pocl_respiration
     nppm[:, idn] = npp_production
     algae_growthm[:, idn] = algae_growth
+    algae_grazingm[:, idn] = algae_grazing
 
     # print(alg/volume)
     # print(nutr/volume)
@@ -2893,7 +3177,7 @@ def run_wq_model(
         algn = alg,
         nutrn = nutr,
         kzn = kz,
-        Uw = Uw(n),
+        Uw = Uw_n,
         depth= depth,
         dx = dx,
         area = area,
@@ -2939,7 +3223,7 @@ def run_wq_model(
         #breakpoint()
     
     #breakpoint()
-    plt.plot(u)
+    #plt.plot(u)
     mixing_res = mixing_module_minlake(
         un = u,
         o2n = o2,
@@ -2955,7 +3239,7 @@ def run_wq_model(
         dx = dx,
         dt = dt,
         nx = nx,
-        Uw = Uw(n),
+        Uw = Uw_n,
         ice = ice, 
         W_str = W_str)
     
@@ -2973,6 +3257,17 @@ def run_wq_model(
     pocl = mixing_res['pocl']
     alg = mixing_res['alg']
     nutr = mixing_res['nutr']
+    
+    # u = u
+    # thermo_dep = 2
+    # energy_ratio = 1
+    # o2 = o2
+    # docr = docr
+    # docl = docl
+    # pocr = pocr
+    # pocl = pocl
+    # alg = alg
+    # nutr = nutr
 
     um_mix[:, idn] = u
     thermo_depm[0,idn] = thermo_dep
@@ -2985,9 +3280,13 @@ def run_wq_model(
         volume = volume)
     
     u = convection_res['temp']
+    #u = u 
     
     plt.plot(u, color = 'black')
+    
+    
     #plt.show()
+    #breakpoint()
     
     um_conv[:, idn] = u
     
@@ -3031,7 +3330,7 @@ def run_wq_model(
     meteo_pgdl[9, idn] = CC(n)
     meteo_pgdl[10, idn] = ea(n)
     meteo_pgdl[11, idn] = Jlw(n)
-    meteo_pgdl[12, idn] = Uw(n)
+    meteo_pgdl[12, idn] = Uw_n
     meteo_pgdl[13, idn] = Pa(n)
     meteo_pgdl[14, idn] = RH(n)
     meteo_pgdl[15, idn] = PP(n)
@@ -3109,6 +3408,7 @@ def run_wq_model(
                'nutr': nutrm,
                'npp':nppm,
                'algae_growth':algae_growthm,
+               'algae_grazing':algae_grazingm,
                'docr_respiration': docr_respirationm,
                'docl_respiration': docl_respirationm,
                'pocr_respiration': pocr_respirationm,
