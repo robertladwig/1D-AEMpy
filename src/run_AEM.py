@@ -18,13 +18,18 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 ## lake configurations
 zmax = 25 # maximum lake depth
-nx = 25 * 1 # number of layers we will have
+nx = 25 * 10 # number of layers we will have
 dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
 ## area and depth values of our lake 
 area, depth, volume = get_hypsography(hypsofile = '../input/bathymetry.csv',
                             dx = dx, nx = nx)
+
+plt.plot(area, depth, color = 'red')
+plt.plot(np.cumsum(volume[::-1]), depth[::-1], color = 'blue')
+plt.gca().invert_yaxis()
+plt.show()
                             
 ## atmospheric boundary conditions
 meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',

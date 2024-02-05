@@ -21,6 +21,8 @@ warnings.filterwarnings("ignore")
 from numba import jit
 from scipy.linalg import solve_banded
 from scipy.stats.stats import pearsonr
+from scipy import integrate
+
 
 
 ## function to calculate density from temperature
@@ -446,6 +448,9 @@ def wq_initial_profile(initfile, nx, dx, depth, volume, startDate):
   return(u)
 
 def get_hypsography(hypsofile, dx, nx):
+    
+  #breakpoint()
+  
   hyps = pd.read_csv(hypsofile)
   out_depths = np.linspace(0, nx*dx, nx+1)
   area_fun = interp1d(hyps.Depth_meter.values, hyps.Area_meterSquared.values)
@@ -457,7 +462,8 @@ def get_hypsography(hypsofile, dx, nx):
   # volume = 0.5 * (area[:-1] + area[1:]) * np.diff(depth)
   # volume = (area[:-1] + area[1:]) * np.diff(depth)
   for d in range(0, (len(depth)-1)):
-      volume[d] = np.abs(sum(area[0:(d+1)] * dx) - sum(area[0:d] * dx))
+      #volume[d] = np.abs(sum(area[0:(d+2)] * dx) - sum(area[0:(d+1)] * dx))
+      volume[d] = integrate.trapezoid([area[d], area[d+1]], dx=dx)
 
   # volume = (area[:-1] - area[1:]) * np.diff(depth)
   # volume = np.append(volume, 1000)
@@ -465,6 +471,10 @@ def get_hypsography(hypsofile, dx, nx):
   volume = volume[:-1]
   depth = 1/2 * (depth[:-1] + depth[1:])
   area = 1/2 * (area[:-1] + area[1:])
+  
+  # plt.plot(area, depth, color = 'red')
+  # plt.plot(volume, depth, color = 'blue')
+  # plt.show()
   
   return([area, depth, volume])
 
@@ -1462,9 +1472,11 @@ def mixing_module_minlake(
             volume_epi = sum(volume[0:(zb+1)]) # 0:zb   RL!
 
         V_weight = volume[zb+1] *volume_epi / (volume[zb+1] + volume_epi) 
+        #V_weight = volume_epi - volume[zb+1]
                
-        
+        # dx/MLD
         POE = (dD * g * V_weight * (MLD + dx/2 - Zg))# * dx # (dD * g * V_weight * (MLD + dx/2 - Zg))
+        # POE = (dD * g * (volume_epi - volume[zb+1]) * (MLD + dx/2 - Zg))# * dx # (dD * g * V_weight * (MLD + dx/2 - Zg))
 
         stored_PE.append(POE)
         stored_MLD.append(MLD)
@@ -1622,7 +1634,7 @@ def mixing_module_minlake(
     
     # (stored_depth) *  (stored_dD) * (stored_Vol) * g
     
-    # breakpoint()
+    breakpoint()
     
     o2 =o2*volume
     docl =docl*volume
