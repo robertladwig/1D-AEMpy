@@ -1394,7 +1394,7 @@ def mixing_module_minlake(
         W_str = W_str
     tau = 1.225 * Cd * Uw ** 2 # wind shear is air density times wind velocity 
     
-    KE = W_str * max(area) * sqrt(tau**3/ calc_dens(u[0]) ) * dt
+    KE = W_str * max(area) * sqrt(tau**3/ calc_dens(u[0]) ) * dt 
     
     #meta_top, meta_bot, thermD = meta_depths(un = u,
     #                          depth = depth,area = area, volume = volume, dx = dx, dt = dt, nx = nx)
@@ -1425,10 +1425,19 @@ def mixing_module_minlake(
     #breakpoint()
     zb = 0
     WmixIndicator = 1
+    
+    stored_PE = []
+    stored_MLD = []
+    stored_KE = []
+    stored_depth = []
+    stored_dD = []
+    stored_Vol = []
+    stored_KEPE = []
+    # POE_prev = 0
     while WmixIndicator == 1:
         #breakpoint()
         rho = calc_dens(u)
-        d_rho = (rho[1:] - rho[:-1])  / (depth[1:] - depth[:-1]) # RL! BIG CHANGE
+        d_rho = (rho[1:] - rho[:-1])  #/ (depth[1:] - depth[:-1]) # RL! BIG CHANGE
         inx = np.where(d_rho > 0.0)
         MLD = 0
         
@@ -1440,27 +1449,51 @@ def mixing_module_minlake(
         
         if zb == (len(d_rho) -1):
             break
-        MLD = depth[zb]
+        MLD = depth[zb] + dx/2
 
         dD = d_rho[zb]
         
-        #breakpoint()
-        Zg = sum(area[0:(zb+2)] *depth[0:(zb+2)]) / sum(area[0:(zb+2)] )
+
+        Zg = sum((area[0:(zb+2)] *depth[0:(zb+2)]) *  rho[0:(zb+2)]) / sum(area[0:(zb+2)] * rho[0:(zb+2)] )
         
         if zb==0:
             volume_epi = volume[0]
         else:
             volume_epi = sum(volume[0:(zb+1)]) # 0:zb   RL!
-        #V_weight = volume[zb+2] *volume_epi / (volume[zb+2] + volume_epi)  RL!
+
         V_weight = volume[zb+1] *volume_epi / (volume[zb+1] + volume_epi) 
+               
         
-        POE = (dD * g * V_weight * (MLD + dx/2 - Zg))
-        #print(POE)
+        POE = (dD * g * V_weight * (MLD + dx/2 - Zg))# * dx # (dD * g * V_weight * (MLD + dx/2 - Zg))
+
+        stored_PE.append(POE)
+        stored_MLD.append(MLD)
+        stored_KE.append(KE)
+        stored_depth.append((MLD + dx - Zg))
+        stored_dD.append(dD)
+        stored_Vol.append(V_weight)
+        
+        
+        
+        
         #breakpoint()
         
+        # plt.plot(rho[0:7],depth[0:7],  color = 'black')
+        # plt.scatter( rho[0:7],depth[0:7], color = 'black')
+        # plt.title(dx)
+        # plt.gca().invert_yaxis()
+        # plt.show()
         
+        # plt.plot( d_rho[0:7], depth[0:7],color = 'black')
+        # plt.scatter( d_rho[0:7],depth[0:7], color = 'black')
+        # plt.title(dx)
+        # plt.gca().invert_yaxis()
+        # plt.show()
+        # breakpoint()
 
         KP_ratio = KE/POE
+        
+        stored_KEPE.append(KP_ratio)
         if KP_ratio > 1:
             Tmix = sum((volume[0:(zb+2)] * u[0:(zb+2)])) / sum(volume[0:(zb+2)])
             u[0:(zb+2)] = Tmix
@@ -1481,15 +1514,15 @@ def mixing_module_minlake(
             pocl[0:(zb+2)] = poclmix
             alg[0:(zb+2)] = algmix
             nutr[0:(zb+2)] = nutrmix
-    
-            print(KE)
+    # 
+            # print(KE)
             KE = KE - POE
-            print(KE)
-            print(POE)
-            print(Tmix)
-            print(zb)
-            print(MLD)
-            breakpoint()
+            # print(KE)
+            # print(POE)
+            # print(Tmix)
+            # print(zb)
+            # print(MLD)
+            # breakpoint()
         else:
             #breakpoint()
             volume_res = volume[0:(zb+1)]
@@ -1537,18 +1570,59 @@ def mixing_module_minlake(
             KE = 0
             WmixIndicator = 0
         #print(KE)
-        plt.plot(u)
+        # plt.plot(u)
+        
             
-    # epi_dens = np.mean(calc_dens(u[0:idx]))
-    # layer_dens = calc_dens(u[idx])
-    # delta_dens =  (layer_dens - epi_dens) 
-    # epi_volume = sum(volume[0:idx])
-    # layer_volume = volume[idx]
-    # volume_ratio = ((epi_volume * layer_volume)/(epi_volume + layer_volume))
-    # epi_zg = (np.matmul(area[0:idx], depth[0:idx]) * calc_dens(u[0:idx])) / (sum(area[0:idx]) *calc_dens(u[0:idx])) 
-    # delta_depth = meta_top + (depth[idx] - meta_top) -  epi_zg[0]
-    # PE = g *delta_dens * volume_ratio * (delta_depth)
+
     
+    plt.plot(stored_PE, stored_MLD, color = 'blue')
+    plt.plot(stored_KE, stored_MLD, color = 'red')
+    plt.scatter(stored_PE, stored_MLD, color = 'blue')
+    plt.scatter(stored_KE, stored_MLD, color = 'red')
+    plt.title(dx)
+    plt.gca().invert_yaxis()
+    plt.show()
+    
+    plt.plot(stored_KEPE, stored_MLD, color = 'green')
+    plt.scatter(stored_KEPE, stored_MLD, color = 'green')
+    plt.title(dx)
+    plt.gca().invert_yaxis()
+    plt.show()
+    
+
+    plt.plot(stored_depth, stored_MLD,  color = 'black')
+    plt.scatter( stored_depth,stored_MLD, color = 'black')
+    plt.title(dx)
+    plt.gca().invert_yaxis()
+    plt.show()
+
+    plt.plot(stored_dD, stored_MLD,  color = 'black')
+    plt.scatter( stored_dD,stored_MLD, color = 'black')
+    plt.title(dx)
+    plt.gca().invert_yaxis()
+    plt.show()
+    
+    plt.plot(stored_Vol, stored_MLD,  color = 'black')
+    plt.scatter( stored_Vol,stored_MLD, color = 'black')
+    plt.title(dx)
+    plt.gca().invert_yaxis()
+    plt.show()
+    
+    int_PE =  np.sum(np.array(stored_MLD) * np.array(stored_PE))  #/ (np.sum(stored_MLD) * dx)
+    print(int_PE)
+    
+    int_KE =  np.sum(np.array(stored_MLD) * np.array(stored_KE))  #/ (np.sum(stored_MLD) * dx)
+    print(int_KE)
+
+    
+    print(sum(stored_PE))
+    print(sum(stored_KE))
+    
+    # d_KE = np.array(stored_KE[:-1]) - np.array(stored_KE[1:])
+    
+    # (stored_depth) *  (stored_dD) * (stored_Vol) * g
+    
+    # breakpoint()
     
     o2 =o2*volume
     docl =docl*volume
@@ -3222,6 +3296,23 @@ def run_wq_model(
         print('')
         #breakpoint()
     
+    ## (4) CONVECTION
+    convection_res = convection_module(
+        un = u,
+        nx = nx,
+        volume = volume)
+    
+    u = convection_res['temp']
+    #u = u 
+    
+    plt.plot(u, color = 'black')
+    
+    
+    #plt.show()
+    #breakpoint()
+    
+    um_conv[:, idn] = u
+    
     #breakpoint()
     #plt.plot(u)
     mixing_res = mixing_module_minlake(
@@ -3273,22 +3364,7 @@ def run_wq_model(
     thermo_depm[0,idn] = thermo_dep
     energy_ratiom[0, idn] = energy_ratio
     
-    ## (4) CONVECTION
-    convection_res = convection_module(
-        un = u,
-        nx = nx,
-        volume = volume)
-    
-    u = convection_res['temp']
-    #u = u 
-    
-    plt.plot(u, color = 'black')
-    
-    
-    #plt.show()
-    #breakpoint()
-    
-    um_conv[:, idn] = u
+
     
     o2m[:, idn] = o2
     docrm[:, idn] = docr

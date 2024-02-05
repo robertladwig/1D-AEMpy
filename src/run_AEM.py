@@ -18,7 +18,7 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 ## lake configurations
 zmax = 25 # maximum lake depth
-nx = 25 * 2 # number of layers we will have
+nx = 25 * 1 # number of layers we will have
 dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
