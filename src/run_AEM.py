@@ -18,19 +18,14 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 ## lake configurations
 zmax = 25 # maximum lake depth
-nx = 25 * 10 # number of layers we will have
+nx = 25 * 2 # number of layers we will have
 dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
 ## area and depth values of our lake 
 area, depth, volume = get_hypsography(hypsofile = '../input/bathymetry.csv',
                             dx = dx, nx = nx)
-
-plt.plot(area, depth, color = 'red')
-plt.plot(np.cumsum(volume[::-1]), depth[::-1], color = 'blue')
-plt.gca().invert_yaxis()
-plt.show()
-                            
+                           
 ## atmospheric boundary conditions
 meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
                     secchifile = None, 
@@ -38,13 +33,8 @@ meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
                      
 ## time step discretization                      
 hydrodynamic_timestep = 24 * dt
-total_runtime =  (1095) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365
-startTime =   (140 + 365*12) * hydrodynamic_timestep/dt - (365*24*2) #150 * 24 * 3600
-endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
-
-hydrodynamic_timestep = 24 * dt
-total_runtime =  (365 *1.5) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365
-startTime =   (160 + 365*5) * hydrodynamic_timestep/dt  #150 * 24 * 3600
+total_runtime =  (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+startTime =   (140 + 365*6) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
 startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
@@ -73,6 +63,7 @@ tp_boundary = tp_boundary.dropna(subset=['tp'])
 
 Start = datetime.datetime.now()
 
+pgdl_mode = 'on'
     
 res = run_wq_model(  
     u = deepcopy(u_ini),
@@ -102,7 +93,7 @@ res = run_wq_model(
     iceT = 6,
     supercooled = 0,
     coupled = 'off',
-    diffusion_method = 'pacanowskiPhilander',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
+    diffusion_method = 'hendersonSellers',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
     scheme ='implicit',
     km = 1.4 * 10**(-7), # 4 * 10**(-6), 
     k0 = 1 * 10**(-2), #1e-2
@@ -126,7 +117,7 @@ res = run_wq_model(
     Hgeo = 0.1, # geothermal heat 
     KEice = 0,
     Ice_min = 0.1,
-    pgdl_mode = 'off',
+    pgdl_mode = pgdl_mode,
     rho_snow = 250,
     p_max = 1/86400,
     IP = 3e-2/86400 ,#0.1, 3e-6
@@ -570,3 +561,242 @@ plt.show()
 # phosphorus bc
 # ice npp
 # wind mixingS
+
+if pgdl_mode == 'on':
+    # save model output
+    
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    df_volumes =  np.ones(len(times)) + sum(volume)
+    df_osgood =  np.ones(len(times)) + (sum(volume)/max(area)) / sqrt(max(area/1e6))
+    df_maxdepth =  np.ones(len(times)) + max(depth)
+    df_meandepth =  np.ones(len(times)) +  (sum(volume)/max(area))
+    df1.insert(1, "Volume_m2", df_volumes, True)
+    df1.insert(2, "Osgood", df_osgood, True)
+    df1.insert(3, "MaxDepth_m", df_maxdepth, True)
+    df1.insert(4, "MeanDepth_m", df_meandepth, True)
+    df1.to_csv('../mcl/output/py_lakecharacteristics.csv', index=None)
+    
+    # initial temp.
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(temp_initial)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_temp_initial00.csv', index=None)
+    
+    # heat temp.
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(temp_heat)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_temp_heat01.csv', index=None)
+    
+    # diffusion temp.
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(temp_diff)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_temp_diff03.csv', index=None)
+    
+    # mixing temp.
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(temp_mix)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_temp_mix05.csv', index=None)
+    
+    # convection temp.
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(temp_conv)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_temp_conv04.csv', index=None)
+    
+    # ice temp.
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(temp_ice)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_temp_ice02.csv', index=None)
+    
+    # diffusivity
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(diff)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_diff.csv', index=None)
+    
+    # buoyancy
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(buoyancy)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_buoyancy.csv', index=None)
+    
+    # meteorology
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(meteo)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df2.columns = ["AirTemp_degC", "Longwave_Wm-2",
+                      "Latent_Wm-2", "Sensible_Wm-2", "Shortwave_Wm-2",
+                      "lightExtinct_m-1","TKE_Jm-1", "ShearStress_Nm-2",
+                      "Area_m2", "CC", 'ea', 'Jlw', 'Uw', 'Pa', 'RH', 'PP', 'IceSnowAttCoeff',
+                      'iceFlag', 'icemovAvg', 'density_snow', 'ice_prior', 'snow_prior', 
+                      'snowice_prior', 'rho_snow_prior', 'IceSnowAttCoeff_prior', 'iceFlag_prior',
+                      'dt_iceon_avg_prior', 'icemovAvg_prior']
+    df = pd.concat([df1, df2], axis = 1)
+    df_airtemp = df['AirTemp_degC']
+    df.to_csv('../mcl/output/py_meteorology_input.csv', index=None)
+    
+        
+    # ice-snow
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(icethickness)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df2.columns = ['ice']
+    t1 = np.matrix(snowthickness)
+    t1 = t1.getT()
+    df3 = pd.DataFrame(t1)
+    df3.columns = ['snow']
+    t1 = np.matrix(snowicethickness)
+    t1 = t1.getT()
+    df4 = pd.DataFrame(t1)
+    df4.columns = ['snowice']
+    df = pd.concat([df1, df2, df3, df4], axis = 1)
+    df.to_csv('../mcl/output/py_icesnow.csv', index=None)
+    
+    # observed data
+    dt = pd.read_csv('../mcl/input/observed_df_lter_hourly_wide_clean.csv', index_col=0)
+    dt=dt.rename(columns = {'DateTime':'time'})
+    dt['time'] = pd.to_datetime(dt['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
+    dt_red = dt[dt['time'] >= startingDate]
+    dt_red = dt_red[dt_red['time'] <= endingDate]
+    
+    # let's set surface to 0 if airtemp is below 0, assuming we have ice
+    temp_flag = df_airtemp <= 0
+    wtr_0m = np.array(dt_red['var.0'])
+    wtr_05m = np.array(dt_red['var.0.5'])
+    wtr_0m[temp_flag] = 0
+    wtr_05m[temp_flag] = 0
+    dt_red['var.0'] = wtr_0m
+    dt_red['var.0.5'] = wtr_05m 
+    dt_red.to_csv('../mcl/output/py_observed_temp.csv', index=None, na_rep='-999')
+    
+    dt_notime = dt_red.drop(dt_red.columns[[0]], axis = 1)
+    dt_notime = dt_notime.transpose()
+    dt_obs = dt_notime.to_numpy()
+    dt_obs.shape
+    
+    # heatmap of temps  
+
+    
+    diff_temp = temp - dt_obs
+    fig, ax = plt.subplots(figsize=(15,5))
+    sns.heatmap(dt_obs, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+    ax.contour(np.arange(.5, dt_obs.shape[1]), np.arange(.5, dt_obs.shape[0]), calc_dens(dt_obs), levels=[999],
+               colors=['black', 'gray'],
+               linestyles = 'dotted')
+    ax.set_ylabel("Depth (m)", fontsize=15)
+    ax.set_xlabel("Time", fontsize=15)    
+    ax.collections[0].colorbar.set_label("Observed WT ($^\circ$C)")
+    xticks_ix = np.array(ax.get_xticks()).astype(int)
+    time_label = times[xticks_ix]
+    nelement = len(times)//N_pts
+    time_label = times[::nelement]
+    #time_label = time_label[::nelement]
+    #ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+    time_label = times[np.array(ax.get_xticks()).astype(int)]
+    ax.set_xticklabels(time_label, rotation=90)
+    yticks_ix = np.array(ax.get_yticks()).astype(int)
+    depth_label = yticks_ix / 2
+    ax.set_yticklabels(depth_label, rotation=0)
+    plt.show()
+    
+    fig, ax = plt.subplots(figsize=(15,5))
+    sns.heatmap(temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+    ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+               colors=['black', 'gray'],
+               linestyles = 'dotted')
+    ax.set_ylabel("Depth (m)", fontsize=15)
+    ax.set_xlabel("Time", fontsize=15)    
+    ax.collections[0].colorbar.set_label("Modeled WT ($^\circ$C)")
+    xticks_ix = np.array(ax.get_xticks()).astype(int)
+    time_label = times[xticks_ix]
+    nelement = len(times)//N_pts
+    time_label = times[::nelement]
+    #time_label = time_label[::nelement]
+    #ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+    time_label = times[np.array(ax.get_xticks()).astype(int)]
+    ax.set_xticklabels(time_label, rotation=90)
+    yticks_ix = np.array(ax.get_yticks()).astype(int)
+    depth_label = yticks_ix / 2
+    ax.set_yticklabels(depth_label, rotation=0)
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(15,5))
+    sns.heatmap(diff_temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0, vmax = 15)
+    ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+               colors=['black', 'gray'],
+               linestyles = 'dotted')
+    ax.set_ylabel("Depth (m)", fontsize=15)
+    ax.set_xlabel("Time", fontsize=15)    
+    ax.collections[0].colorbar.set_label("Diff PB-OBS ($^\circ$C)")
+    xticks_ix = np.array(ax.get_xticks()).astype(int)
+    time_label = times[xticks_ix]
+    nelement = len(times)//N_pts
+    time_label = times[::nelement]
+    #time_label = time_label[::nelement]
+    #ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+    time_label = times[np.array(ax.get_xticks()).astype(int)]
+    ax.set_xticklabels(time_label, rotation=90)
+    yticks_ix = np.array(ax.get_yticks()).astype(int)
+    depth_label = yticks_ix / 2
+    ax.set_yticklabels(depth_label, rotation=0)
+    plt.show()
+    
+    
+    fig, axs = plt.subplots(5, figsize = (10,20))
+    
+    axs[0].plot(times, dt_obs[0,:], color ='red', label = 'observed')
+    axs[0].plot(times, temp[0,:], label = 'modeled')
+    axs[0].set_title(depth[0])
+    
+    axs[1].plot(times, dt_obs[10,:], color ='red')
+    axs[1].plot(times, temp[10,:])
+    axs[1].set_title(depth[10])
+    
+    axs[2].plot(times, dt_obs[25,:], color ='red')
+    axs[2].plot(times, temp[25,:])
+    axs[2].set_title(depth[25])
+    
+    axs[3].plot(times, dt_obs[37,:], color ='red')
+    axs[3].plot(times, temp[37,:])
+    axs[3].set_title(depth[37])
+    
+    axs[4].plot(times, dt_obs[48,:], color ='red')
+    axs[4].plot(times, temp[48,:])
+    axs[4].set_title(depth[48])
+    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    fig.legend(lines, labels)
+    plt.show()

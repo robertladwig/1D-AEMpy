@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
-from math import pi, exp, sqrt, log, atan, sin, radians, nan, isinf
+from math import pi, exp, sqrt, log, atan, sin, radians, nan, isinf, ceil
 from scipy.interpolate import interp1d
 from copy import deepcopy
 import datetime
@@ -129,13 +129,13 @@ def eddy_diffusivity_hendersonSellers(rho, depth, g, rho_0, ice, area, U10, lati
     # if (np.mean(T) <= 5):
         # kz = kz * 1000
     # Hongping Gu et al. (2015). Climate Change
-    LST = T[0]
-    if (LST > 4):
-        kz = kz * 10**2
-    elif (LST > 0) & (LST <= 4):
-        kz = kz * 10**4
-    elif LST <= 0:
-        kz = kz * 0
+    # LST = T[0]
+    # if (LST > 4):
+    #     kz = kz * 10**2
+    # elif (LST > 0) & (LST <= 4):
+    #     kz = kz * 10**4
+    # elif LST <= 0:
+    #     kz = kz * 0
     
 
     if (np.mean(diff) == 0.0):
@@ -271,7 +271,7 @@ def eddy_diffusivity_pacanowskiPhilander(rho, depth, g, rho_0, ice, area, U10, l
     
     kz = K0 / (1 + 5 * Ri)**2 + Kb
     
-    kz[0] = kz[1]
+    kz[0] = kz[1] * 1.1
     
     # modify according to Ekman layer depth
     
@@ -470,7 +470,7 @@ def get_hypsography(hypsofile, dx, nx):
   
   volume = volume[:-1]
   depth = 1/2 * (depth[:-1] + depth[1:])
-  area = 1/2 * (area[:-1] + area[1:])
+  area = area[:-1] #1/2 * (area[:-1] + area[1:])
   
   # plt.plot(area, depth, color = 'red')
   # plt.plot(volume, depth, color = 'blue')
@@ -931,7 +931,14 @@ def heating_module(
     Tair = Tair * at_factor
     Jsw = Jsw * sw_factor
     
+    # plt.plot(depth, un, color = 'red')
+    
+
+    un_prior = un
+
     u = un
+    
+   
     
     Q = (longwave(cc = CC, sigma = sigma, Tair = Tair, ea = ea, emissivity = emissivity, Jlw = Jlw) + #longwave(emissivity = emissivity, Jlw = Jlw) +
             backscattering(emissivity = emissivity, sigma = sigma, Twater = un[0], eps = eps) +
@@ -959,17 +966,89 @@ def heating_module(
     #   # bottom layer
     # u[(nx-1)] = un[(nx-1)] + (abs(H[(nx-1)]-H[(nx-2)]) * area[(nx-1)]/(area[(nx-1)] * dx) * 1/(4181 * calc_dens(un[(nx-1)])) +Hg[(nx-1)]/area[(nx-1)]) * dt
     
+    # breakpoint()
+    
+    #surface layer
+    # u[0] = (un[0] + 
+    #     (Q * area[0]/(1)*1/(4184 * calc_dens(un[0]) )/(volume[0]) + (H[0] - H[0+1])/dx * area[0]/(4184 * calc_dens(un[0]) )/(area[0]) + # dx to 1
+    #       Hg[0]/(area[0])) * dt)
+    #   # all layers in between
+    # for i in range(1,(nx-1)):
+    #       u[i] = un[i] + ( (H[i] - H[i+1])/dx * area[i]/(4184 * calc_dens(un[i]) )/(area[i]) + Hg[i]/(area[i]))* dt
+    #   # bottom layer
+    # u[(nx-1)] = un[(nx-1)] + ( (H[nx-2] - H[nx-1])/dx * area[(nx-1)] * 1/(4181 * calc_dens(un[(nx-1)]))/area[(nx-1)] + Hg[(nx-1)]/(area[(nx-1)])) * dt
+    
+    
     u[0] = (un[0] + 
-        (Q * area[0]/(1)*1/(4184 * calc_dens(un[0]) )/(volume[0]) + (H[0] - H[0+1])/dx * area[0]/(4184 * calc_dens(un[0]) )/(area[0]) + # dx to 1
-         Hg[0]/(area[0])) * dt)
+        ((Q * area[0])/(4184 * calc_dens(un[0]) * volume[0]) + ((H[0] * area[0]- H[0+1] * area[0+1]) )/(4184 * calc_dens(un[0]) * volume[0] ) + 
+          ((area[0]* Hgeo - area[0+1]* Hgeo))/(4184 * calc_dens(un[0]) * volume[0])) * dt)
       # all layers in between
     for i in range(1,(nx-1)):
-         u[i] = un[i] + ( (H[i] - H[i+1])/dx * area[i]/(4184 * calc_dens(un[i]) )/(area[i]) + Hg[i]/(area[i]))* dt
+          u[i] = un[i] + ( ( (H[i] * area[i]- H[i+1] * area[i+1]))/(4184 * calc_dens(un[i]) * volume[i] ) + 
+              ((area[i]* Hgeo - area[i+1] * Hgeo))/(4184 * calc_dens(un[i]) * volume[i]))* dt
       # bottom layer
-    # u[(nx-1)] = un[(nx-1)] + ( H[nx-1] * area[(nx-1)]/(area[(nx-1)] ) * 1/(4181 * calc_dens(un[(nx-1)])) + Hg[(nx-1)]/area[(nx-1)]) * dt
-    u[(nx-1)] = un[(nx-1)] + ( (H[nx-2] - H[nx-1])/dx * area[(nx-1)] * 1/(4181 * calc_dens(un[(nx-1)]))/area[(nx-1)] + Hg[(nx-1)]/(area[(nx-1)])) * dt
+    u[(nx-1)] = un[(nx-1)] +( ( (H[nx-2] * area[nx-2]- H[nx-1] * area[nx-1]) )/(4184 * calc_dens(un[nx-1]) * volume[nx-1] ) + 
+          ((area[nx-2]* Hgeo - area[nx-1]* Hgeo))/(4184 * calc_dens(un[nx-1]) * volume[nx-1]))* dt
+    
+    Harea = H *0.0
+    Harea[0] = (H[0] * area[0]- H[0+1] * area[0+1])
+    for i in range(1,(nx-1)):
+        Harea[i] =         (H[i] * area[i]- H[i+1] * area[i+1])
+    Harea[nx-1] = (H[nx-2] * area[nx-2]- H[nx-1] * area[nx-1])
+    
+    Hgeoarea = H *0.0
+    Hgeoarea[0] =(area[0]* Hgeo - area[0+1]* Hgeo)
+    for i in range(1,(nx-1)):
+        Hgeoarea[i] =     area[i]* Hgeo - area[i+1] * Hgeo
+    Hgeoarea[nx-1] = area[nx-2]* Hgeo - area[nx-1]* Hgeo
+    
 
 
+    external_energy = (Q * area[0] + sum(Harea) + sum(Hgeoarea)) * dt/1
+    
+    
+    
+    # depth_2 = np.array([ 0.25,  0.75,  1.25,  1.75,  2.25,  2.75,  3.25,  3.75,  4.25,
+    #         4.75,  5.25,  5.75,  6.25,  6.75,  7.25,  7.75,  8.25,  8.75,
+    #         9.25,  9.75, 10.25, 10.75, 11.25, 11.75, 12.25, 12.75, 13.25,
+    #        13.75, 14.25, 14.75, 15.25, 15.75, 16.25, 16.75, 17.25, 17.75,
+    #        18.25, 18.75, 19.25, 19.75, 20.25, 20.75, 21.25, 21.75, 22.25,
+    #        22.75, 23.25, 23.75, 24.25, 24.75])
+    # u_2 = np.array([18.95855388, 18.82500898, 18.77500485, 18.725005  , 18.70000488,
+    #        18.70000503, 18.7000049 , 18.70000504, 18.67500461, 18.62500474,
+    #        18.60000272, 18.60000277, 18.6000025 , 18.60000253, 18.60000322,
+    #        18.60000328, 18.17500335, 17.32500341, 16.60000348, 16.00000355,
+    #        15.55000473, 15.25000486, 14.95000618, 14.65000641, 14.32500497,
+    #        13.97500512, 13.57500661, 13.12500688, 12.80000378, 12.60000387,
+    #        12.42500597, 12.27500619, 12.07500642, 11.82500666, 11.65000871,
+    #        11.55000917, 11.45001577, 11.35001736, 11.25002187, 11.15002506,
+    #        11.07502933, 11.02503535, 10.97503898, 10.92505039, 10.87505406,
+    #        10.82507882, 10.8001054 , 10.80027181, 10.80011477, 10.80017215])
+    
+   
+    # ax = plt.gca()
+    # plt.plot((u_2), depth_2, color = 'blue', linestyle='dashed')
+    # plt.plot(u, depth, color = 'red', linestyle='dashed')
+    # plt.scatter((u_2), depth_2, color = 'blue', linestyle='dashed')
+    # plt.scatter(u, depth, color = 'red', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # ax.set_ylim([3,0])
+    # ax.set_xlim([18.5, 19.5])
+    # plt.show()
+    # breakpoint()
+    
+    
+    # print(u[0])
+    # print((Q * area[0])/(4184 * calc_dens(un[0]) * volume[0]))
+    # print(((H[0] + H[0+1])  * area[0])/(4184 * calc_dens(un[0]) * volume[0] ))
+    # print(((H[0] + H[0+1])/2  * area[0])/(4184 * calc_dens(un[0]) * volume[0] ))
+    # print(((H[0] + H[0+1])/dx  * area[0])/(4184 * calc_dens(un[0]) * area[0] ))
+    # print((area[0]* Hgeo)/(4184 * calc_dens(un[0]) * volume[0]))
+    # breakpoint()
+    # plt.plot(depth, u, color = 'blue')
+    # plt.show()
+    # breakpoint()
     end_time = datetime.datetime.now()
     print("heating: " + str(end_time - start_time))
     
@@ -981,7 +1060,8 @@ def heating_module(
             'sensible_flux': sensible(Tair = Tair, Twater = un[0], Uw = Uw, p2 = p2, pa = Pa, ea=ea, RH = RH, A = area, Cd = Cd) ,
             'shortwave_flux': H[0] ,
             'light': kd_light,
-            'IceSnowAttCoeff': IceSnowAttCoeff}
+            'IceSnowAttCoeff': IceSnowAttCoeff,
+            'external_energy': external_energy}
 
     
     return dat
@@ -1026,21 +1106,26 @@ def diffusion_module(
 
         #kzn = kzn * 0+1e-5
         
-        # area_diff = np.ones(len(depth))
-        # area_diff[:-1] = np.abs(area[1:] - area[:-1]) / (depth[1:] - depth[:-1]) 
-        # area_diff[-1] = area_diff[-2]
+        area_diff = np.ones(len(depth))
+        area_diff[:-1] = np.abs(area[1:] - area[:-1]) / (depth[1:] - depth[:-1]) 
+        area_diff[-1] = area_diff[-2]
         
-        # kzn_diff = np.ones(len(depth))
-        # kzn_diff[:-1] = np.abs(kzn[1:] - kzn[:-1]) / (depth[1:] - depth[:-1]) 
-        # kzn_diff[-1] = kzn_diff[-2]
+        kzn_diff = np.ones(len(depth))
+        kzn_diff[:-1] = np.abs(kzn[1:] - kzn[:-1]) / (depth[1:] - depth[:-1]) 
+        kzn_diff[-1] = kzn_diff[-2]
         
         
-        #alpha = (area * kzn * dt) / (dx**2)
+        # alpha = (area_diff * kzn_diff * dt) / (area * dx**2)
+        alpha = (area * kzn * dt) / (area * dx**2)
         
-        alpha = (area * kzn * dt) / (dx**2)
+        if max(alpha) > 1:
+            print('Warning: alpha > 1')
+            print("Warning: ",max(alpha)," > 1")
+            
+        # alpha = (area * kzn * dt) / (dx**2)
         
         az = - alpha/2 # subdiagonal
-        bz = (area + alpha)#(area + alpha) #(area + 2 * alpha) # diagonal
+        bz = (1 + alpha)#(area + alpha) #(area + 2 * alpha) # diagonal
         cz = - alpha/2 # superdiagonal
         
         bz[0] = 1
@@ -1065,14 +1150,14 @@ def diffusion_module(
         mn[0] = un[0]
         mn[-1] = un[-1]
         
-        # bz_old = (area + alpha)#(area + alpha)
+        bz_old = (1 + alpha)#(area + alpha)
         # y[0, 0] = bz_old[0]
-        # y[j-1, j-1] = bz_old[len(bz_old)-1] 
+        y[j-1, j-1] = bz_old[len(bz_old)-1] 
         # y[0, 1] = -alpha[0] 
-        # y[j-1, j-2] = -alpha[len(alpha)-1]
+        y[j-1, j-2] = -alpha[len(alpha)-1]
 
-        # mn[0] = (area[0] - alpha[0])  * un[0] + alpha[0+1] * un[0+1]
-        # mn[-1] = (area[-1] - alpha[-1])  * un[-1] + alpha[-1 -1] * un[-1-1]
+        # mn[0] = (1 - alpha[0])  * un[0] + alpha[0+1] * un[0+1]
+        mn[-1] = (1 - alpha[-1])  * un[-1] + alpha[-1 -1] * un[-1-1]
         
         #mn[0] = (1- 2 * alpha[0])  * un[0] + 2* alpha[0+1] * un[0+1]
         #mn[-1] = (1 - 2 * alpha[-1])  * un[-1] + 2* alpha[-1 -1] * un[-1-1]
@@ -1082,14 +1167,16 @@ def diffusion_module(
         # https://mathonweb.com/resources/book4/Heat-Equation.pdf 
         
         for k in range(1,j-1):
-            mn[k] = alpha[k]/2 * un[k-1] + (area[k] - alpha[k]) * un[k] + alpha[k]/2 * un[k+1]
+            # mn[k] = alpha[k]/2 * un[k-1] + (area[k] - alpha[k]) * un[k] + alpha[k]/2 * un[k+1]
+            mn[k] = alpha[k]/2 * un[k-1] + (1 - alpha[k]) * un[k] + alpha[k]/2 * un[k+1]
+            # mn[k] = alpha[k-1]/2 * un[k-1] + (1 - alpha[k]) * un[k] + alpha[k+1]/2 * un[k+1]
             #mn[k] = alpha[k] * un[k-1] + (1 - 2 * alpha[k]) * un[k] + alpha[k] * un[k+1]
         
 
     # DERIVED TEMPERATURE OUTPUT FOR NEXT MODULE
         u = np.linalg.solve(y, mn)
         
-        print(sum(u-un))
+        #print(sum(u-un))
         #breakpoint()
 
     if scheme == 'explicit':
@@ -1099,7 +1186,34 @@ def diffusion_module(
       for i in range(1,(nx-1)):
         u[i] = (un[i] + (kzn[i] * dt / dx**2 * (un[i+1] - 2 * un[i] + un[i-1])))
       
-
+    # u_2 = np.array([18.95855388, 18.9280127 , 18.82986497, 18.76576224, 18.72116106,
+    #         18.70248998, 18.70009014, 18.69913197, 18.67478876, 18.62518892,
+    #         18.60012487, 18.60000295, 18.6000025 , 18.60000254, 18.60000274,
+    #         18.59939056, 18.17439164, 17.32518289, 16.60018353, 16.00021955,
+    #         15.55022059, 15.25000502, 14.95000615, 14.64997043, 14.32496894,
+    #         13.97493314, 13.57493479, 13.12518669, 12.80018369, 12.60003998,
+    #         12.42504189, 12.27493426, 12.07493455, 11.82511454, 11.65011663,
+    #         11.55000926, 11.45001576, 11.35001736, 11.2500219 , 11.15006103,
+    #         11.0750653 , 11.02503537, 10.97503899, 10.92505037, 10.87505412,
+    #         10.82511479, 10.80014157, 10.80027137, 10.80011507, 10.80017215])
+    # depth_2 = np.array([ 0.25,  0.75,  1.25,  1.75,  2.25,  2.75,  3.25,  3.75,  4.25,
+    #         4.75,  5.25,  5.75,  6.25,  6.75,  7.25,  7.75,  8.25,  8.75,
+    #         9.25,  9.75, 10.25, 10.75, 11.25, 11.75, 12.25, 12.75, 13.25,
+    #         13.75, 14.25, 14.75, 15.25, 15.75, 16.25, 16.75, 17.25, 17.75,
+    #         18.25, 18.75, 19.25, 19.75, 20.25, 20.75, 21.25, 21.75, 22.25,
+    #         22.75, 23.25, 23.75, 24.25, 24.75])
+    # ax = plt.gca()
+    # plt.plot((u_2), depth_2, color = 'blue', linestyle='dashed')
+    # plt.plot(u, depth, color = 'red', linestyle='dashed')
+    # plt.scatter((u_2), depth_2, color = 'blue', linestyle='dashed')
+    # plt.scatter(u, depth, color = 'red', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # ax.set_ylim([3,0])
+    # ax.set_xlim([18.5, 19.5])
+    # plt.show()
+    # breakpoint()
+    
     end_time = datetime.datetime.now()
     print("diffusion: " + str(end_time - start_time))
     
@@ -1443,6 +1557,8 @@ def mixing_module_minlake(
     stored_dD = []
     stored_Vol = []
     stored_KEPE = []
+    stored_zg = []
+    TKE_total = KE
     # POE_prev = 0
     while WmixIndicator == 1:
         #breakpoint()
@@ -1450,6 +1566,7 @@ def mixing_module_minlake(
         d_rho = (rho[1:] - rho[:-1])  #/ (depth[1:] - depth[:-1]) # RL! BIG CHANGE
         inx = np.where(d_rho > 0.0)
         MLD = 0
+        
         
         inx_array = np.array(inx)
         if inx_array.size == 0:
@@ -1464,8 +1581,10 @@ def mixing_module_minlake(
         dD = d_rho[zb]
         
 
-        Zg = sum((area[0:(zb+2)] *depth[0:(zb+2)]) *  rho[0:(zb+2)]) / sum(area[0:(zb+2)] * rho[0:(zb+2)] )
+        #Zg = sum((area[0:(zb+2)] *depth[0:(zb+2)]) *  rho[0:(zb+2)]) / sum(area[0:(zb+2)] * rho[0:(zb+2)] )
+        Zg = sum((area[0:(zb+1)] *depth[0:(zb+1)]) *  rho[0:(zb+1)] *dx) / sum(area[0:(zb+1)] * rho[0:(zb+1)] *dx)
         
+        Zg = ceil(Zg*100)/100
         if zb==0:
             volume_epi = volume[0]
         else:
@@ -1475,7 +1594,8 @@ def mixing_module_minlake(
         #V_weight = volume_epi - volume[zb+1]
                
         # dx/MLD
-        POE = (dD * g * V_weight * (MLD + dx/2 - Zg))# * dx # (dD * g * V_weight * (MLD + dx/2 - Zg))
+        POE =  (dD * g * V_weight * (MLD + dx/2 - Zg))# * dx # (dD * g * V_weight * (MLD + dx/2 - Zg))
+        #POE = (dD * g * V_weight * (MLD - Zg))
         # POE = (dD * g * (volume_epi - volume[zb+1]) * (MLD + dx/2 - Zg))# * dx # (dD * g * V_weight * (MLD + dx/2 - Zg))
 
         stored_PE.append(POE)
@@ -1484,7 +1604,7 @@ def mixing_module_minlake(
         stored_depth.append((MLD + dx - Zg))
         stored_dD.append(dD)
         stored_Vol.append(V_weight)
-        
+        stored_zg.append(Zg)
         
         
         
@@ -1534,6 +1654,8 @@ def mixing_module_minlake(
             # print(Tmix)
             # print(zb)
             # print(MLD)
+            # if MLD == 0.5:
+            #     breakpoint()
             # breakpoint()
         else:
             #breakpoint()
@@ -1587,54 +1709,141 @@ def mixing_module_minlake(
             
 
     
-    plt.plot(stored_PE, stored_MLD, color = 'blue')
-    plt.plot(stored_KE, stored_MLD, color = 'red')
-    plt.scatter(stored_PE, stored_MLD, color = 'blue')
-    plt.scatter(stored_KE, stored_MLD, color = 'red')
-    plt.title(dx)
-    plt.gca().invert_yaxis()
-    plt.show()
+    # plt.plot(stored_PE, stored_MLD, color = 'blue')
+    # plt.plot(stored_KE, stored_MLD, color = 'red')
+    # plt.scatter(stored_PE, stored_MLD, color = 'blue')
+    # plt.scatter(stored_KE, stored_MLD, color = 'red')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
     
-    plt.plot(stored_KEPE, stored_MLD, color = 'green')
-    plt.scatter(stored_KEPE, stored_MLD, color = 'green')
-    plt.title(dx)
-    plt.gca().invert_yaxis()
-    plt.show()
+    # stored_PE_1 = [279870.4921906099, 1948722.1810153024, 3546568.929097026, 4972250.706489938, 5662916.797241287]
+    # stored_MLD_1 = [0.5, 1.0, 1.5, 2.0, 2.5]
+    # stored_KE_1 = [14664554.058247184, 14384683.566056574, 12435961.38504127, 8889392.455944244, 3917141.7494543055]
+    # stored_KEPE_1 = [52.39764272204757, 7.381597903587273, 3.506476719799022, 1.7878005315262018, 0.6917180473784388]
+    # stored_depth_1 = [0.75, 1.0, 1.26, 1.52, 1.78]
+    # stored_dD_1 = [0.00602188307891538, 0.02190563951637614, 0.02717972989307782, 0.029281746706033118, 0.0273713879804518]
+    # stored_Vol_1 = [9475143.169083718, 12091041.760215536, 13169609.187521426, 13629606.271777004, 13784243.040811513]
+    # stored_zg_1 =  [0.25, 0.5, 0.74, 0.98, 1.22]
+    # u_1 = [18.82832191, 18.82832191, 18.82832191, 18.82832191, 18.82832191,
+    #         18.7895271 , 18.70008958, 18.6991317 , 18.67478875, 18.6251879 ,
+    #         18.60012487, 18.6000028 , 18.6000025 , 18.60000285, 18.60000274,
+    #         18.59939056, 18.17439164, 17.32518289, 16.60018354, 16.00022009,
+    #         15.5502206 , 15.25000559, 14.95000616, 14.64996964, 14.32496895,
+    #         13.97493379, 13.5749348 , 13.1251851 , 12.80018369, 12.60004095,
+    #         12.4250419 , 12.27493427, 12.07493456, 11.82511538, 11.65011665,
+    #         11.55001203, 11.4500158 , 11.35001848, 11.25002194, 11.15006108,
+    #         11.07506535, 11.02503347, 10.97503905, 10.92504523, 10.8750542 ,
+    #         10.82510665, 10.80014158, 10.80014509, 10.80005766, 10.80008624]
+    # depth_1 = [ 0.25,  0.75,  1.25,  1.75,  2.25,  2.75,  3.25,  3.75,  4.25,
+    #         4.75,  5.25,  5.75,  6.25,  6.75,  7.25,  7.75,  8.25,  8.75,
+    #         9.25,  9.75, 10.25, 10.75, 11.25, 11.75, 12.25, 12.75, 13.25,
+    #         13.75, 14.25, 14.75, 15.25, 15.75, 16.25, 16.75, 17.25, 17.75,
+    #         18.25, 18.75, 19.25, 19.75, 20.25, 20.75, 21.25, 21.75, 22.25,
+    #         22.75, 23.25, 23.75, 24.25, 24.75]
+    
+    # plt.plot(np.cumsum(stored_PE), stored_MLD, color = 'blue')
+    # plt.plot(stored_KE, stored_MLD, color = 'red')
+    # plt.scatter(np.cumsum(stored_PE), stored_MLD, color = 'blue')
+    # plt.scatter(stored_KE, stored_MLD, color = 'red')
+    # plt.plot(np.cumsum(stored_PE_1), stored_MLD_1, color = 'blue', linestyle='dashed')
+    # plt.plot(stored_KE_1, stored_MLD_1, color = 'red', linestyle='dashed')
+    # plt.scatter(np.cumsum(stored_PE_1), stored_MLD_1, color = 'blue', linestyle='dashed')
+    # plt.scatter(stored_KE_1, stored_MLD_1, color = 'red', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
+    
+    # plt.plot((stored_PE), stored_MLD, color = 'blue')
+    # plt.plot(stored_KE, stored_MLD, color = 'red')
+    # plt.scatter((stored_PE), stored_MLD, color = 'blue')
+    # plt.scatter(stored_KE, stored_MLD, color = 'red')
+    # plt.plot((stored_PE_1), stored_MLD_1, color = 'blue', linestyle='dashed')
+    # plt.plot(stored_KE_1, stored_MLD_1, color = 'red', linestyle='dashed')
+    # plt.scatter((stored_PE_1), stored_MLD_1, color = 'blue', linestyle='dashed')
+    # plt.scatter(stored_KE_1, stored_MLD_1, color = 'red', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
+    
+    
+    # plt.plot(stored_KEPE, stored_MLD, color = 'green')
+    # plt.scatter(stored_KEPE, stored_MLD, color = 'green')
+    # plt.plot(stored_KEPE_1, stored_MLD_1, color = 'green', linestyle='dashed')
+    # plt.scatter(stored_KEPE_1, stored_MLD_1, color = 'green', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
     
 
-    plt.plot(stored_depth, stored_MLD,  color = 'black')
-    plt.scatter( stored_depth,stored_MLD, color = 'black')
-    plt.title(dx)
-    plt.gca().invert_yaxis()
-    plt.show()
+    # plt.plot(stored_depth, stored_MLD,  color = 'black')
+    # plt.scatter( stored_depth,stored_MLD, color = 'black')
+    # plt.plot(stored_depth_1, stored_MLD_1,  color = 'black', linestyle='dashed')
+    # plt.scatter( stored_depth_1,stored_MLD_1, color = 'black', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
 
-    plt.plot(stored_dD, stored_MLD,  color = 'black')
-    plt.scatter( stored_dD,stored_MLD, color = 'black')
-    plt.title(dx)
-    plt.gca().invert_yaxis()
-    plt.show()
+    # plt.plot(stored_dD, stored_MLD,  color = 'black')
+    # plt.scatter( stored_dD,stored_MLD, color = 'black')
+    # plt.plot(stored_dD_1, stored_MLD_1,  color = 'black', linestyle='dashed')
+    # plt.scatter( stored_dD_1,stored_MLD_1, color = 'black', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
     
-    plt.plot(stored_Vol, stored_MLD,  color = 'black')
-    plt.scatter( stored_Vol,stored_MLD, color = 'black')
-    plt.title(dx)
-    plt.gca().invert_yaxis()
-    plt.show()
+    # plt.plot(stored_Vol, stored_MLD,  color = 'black')
+    # plt.scatter( stored_Vol,stored_MLD, color = 'black')
+    # plt.plot(stored_Vol_1, stored_MLD_1,  color = 'black', linestyle='dashed')
+    # plt.scatter( stored_Vol_1,stored_MLD_1, color = 'black', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
     
-    int_PE =  np.sum(np.array(stored_MLD) * np.array(stored_PE))  #/ (np.sum(stored_MLD) * dx)
-    print(int_PE)
+    # plt.plot(stored_zg, stored_MLD,  color = 'green')
+    # plt.scatter( stored_zg,stored_MLD, color = 'green')
+    # plt.plot(stored_zg_1, stored_MLD_1,  color = 'green', linestyle='dashed')
+    # plt.scatter( stored_zg_1,stored_MLD_1, color = 'green', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # plt.show()
     
-    int_KE =  np.sum(np.array(stored_MLD) * np.array(stored_KE))  #/ (np.sum(stored_MLD) * dx)
-    print(int_KE)
+    # ax = plt.gca()
+    # plt.plot(calc_dens(u), depth,  color = 'black')
+    # plt.scatter( calc_dens(u),depth, color = 'black')
+    # plt.plot(calc_dens(np.array(u_1)), depth_1,  color = 'green', linestyle='dashed')
+    # plt.scatter( calc_dens(np.array(u_1)),depth_1, color = 'green', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # ax.set_ylim([5,0])
+    # ax.set_xlim([998.35, 998.49])
+    # plt.show()
+    
+    # ax = plt.gca()
+    # plt.plot((u), depth,  color = 'black')
+    # plt.scatter( (u),depth, color = 'black')
+    # plt.plot((np.array(u_1)), depth_1,  color = 'green', linestyle='dashed')
+    # plt.scatter( (np.array(u_1)),depth_1, color = 'green', linestyle='dashed')
+    # plt.title(dx)
+    # plt.gca().invert_yaxis()
+    # ax.set_ylim([5,0])
+    # ax.set_xlim([18.5, 19.3])
+    # plt.show()
+    # # int_PE =  np.sum(np.array(stored_MLD) * np.array(stored_PE))  #/ (np.sum(stored_MLD) * dx)
+    # # print(int_PE)
+    
+    # # int_KE =  np.sum(np.array(stored_MLD) * np.array(stored_KE))  #/ (np.sum(stored_MLD) * dx)
+    # # print(int_KE)
 
     
-    print(sum(stored_PE))
-    print(sum(stored_KE))
+    # # print(sum(stored_PE))
+    # # print(sum(stored_KE))
     
-    # d_KE = np.array(stored_KE[:-1]) - np.array(stored_KE[1:])
+    # # d_KE = np.array(stored_KE[:-1]) - np.array(stored_KE[1:])
     
-    # (stored_depth) *  (stored_dD) * (stored_Vol) * g
+    # # (stored_depth) *  (stored_dD) * (stored_Vol) * g
     
-    breakpoint()
+    # breakpoint()
     
     o2 =o2*volume
     docl =docl*volume
@@ -1659,6 +1868,7 @@ def mixing_module_minlake(
            'alg': alg,
            'nutr': nutr,
            'tau': tau,
+           'TKE':TKE_total,
            'thermo_dep': zb,
            'energy_ratio': energy_ratio}
     
@@ -2925,6 +3135,9 @@ def run_wq_model(
           
     un = deepcopy(u)
     un_initial = un
+    
+    internal_energy_1 = sum(un * calc_dens(un) * area) *dx * 4186
+    
     #breakpoint()
     
     depth_limit = mean_depth
@@ -2949,7 +3162,7 @@ def run_wq_model(
     alg_initial[:, idn] = pocr
     nutr_initial[:, idn] = pocl
     
-
+    # breakpoint()
     ## (1) HEATING
     heating_res = heating_module(
         un = u,
@@ -2979,6 +3192,17 @@ def run_wq_model(
     
     u = heating_res['temp']
     IceSnowAttCoeff = heating_res['IceSnowAttCoeff']
+    external_energy = heating_res['external_energy']
+    
+    internal_energy_heat = sum(u * calc_dens(u) * area) *dx * 4186
+    
+    delta_energy_heat = (external_energy/(internal_energy_heat-internal_energy_1))
+    # if  delta_energy_heat < 0.5:
+    #     breakpoint()
+        
+    # 1/m2 deg C kg/m3 m2 m J/kg/K --> J/m2
+    # print(external_energy/(internal_energy_heat-internal_energy_1))
+    # breakpoint()
     
     plt.plot(u, color = 'red')
     
@@ -3018,12 +3242,17 @@ def run_wq_model(
     supercooled = ice_res['supercooled']
     rho_snow = ice_res['density_snow']
     
+    
+    internal_energy_ice =  sum(u * calc_dens(u) * area) *dx * 4186
+    # print(external_energy/(internal_energy_ice-internal_energy_1))
+    # breakpoint()
+    
     plt.plot(u, color = 'blue')
     
     um_ice[:, idn] = u
     
 
-    
+    #breakpoint()
     dens_u_n2 = calc_dens(u)
     if 'kz' in locals():
         1+1
@@ -3033,13 +3262,13 @@ def run_wq_model(
     if diffusion_method == 'hendersonSellers':
         kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
     elif diffusion_method == 'munkAnderson':
-        kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, Cd, u, kz) / 1
+        kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, Cd, u, kz,  km, weight_kz, k0) / 1
     elif diffusion_method == 'hondzoStefan':
         kz = eddy_diffusivity(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, u, kz) / 86400
     elif diffusion_method == 'pacanowskiPhilander':
         kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
     
-    
+    #plt.plot(kz)
     ## (2) DIFFUSION
     diffusion_res = diffusion_module(
         un = u,
@@ -3058,6 +3287,10 @@ def run_wq_model(
     kz = diffusion_res['diffusivity']
     
     plt.plot(u, color = 'purple')
+    
+    internal_energy_diff =  sum(u * calc_dens(u) * area) *dx * 4186
+    # print(external_energy/(internal_energy_diff-internal_energy_1))
+    # breakpoint()
     
     kzm[:,idn] = kz
     um_diff[:, idn] = u
@@ -3317,6 +3550,10 @@ def run_wq_model(
     u = convection_res['temp']
     #u = u 
     
+    internal_energy_conv = sum(u * calc_dens(u) * area) *dx * 4186
+    # print(external_energy/(internal_energy_conv-internal_energy_1))
+    # breakpoint()
+    
     plt.plot(u, color = 'black')
     
     
@@ -3404,6 +3641,14 @@ def run_wq_model(
     Hsim[0,idn] = Hsi
     
     kd_lightm[0,idn] =kd_light
+    
+    internal_energy_2 =  sum(u * calc_dens(u) * area) *dx * 4186
+    delta_energy = (external_energy/(internal_energy_2-internal_energy_1))
+    if  delta_energy < 0.5:
+        print("Warning: energy change is too extreme, ",np.round(delta_energy))
+        # print("Warning: energy change is t",delta_energy," > 1")
+    # int2 = ext + int1
+    # breakpoint()
 
     
     meteo_pgdl[0, idn] = heating_res['air_temp']
@@ -3412,8 +3657,8 @@ def run_wq_model(
     meteo_pgdl[3, idn] = heating_res['sensible_flux']
     meteo_pgdl[4, idn] = heating_res['shortwave_flux']
     meteo_pgdl[5, idn] = heating_res['light']
-    meteo_pgdl[6, idn] = -999 #mixing_res['shear']
-    meteo_pgdl[7, idn] = -999 #mixing_res['tau']
+    meteo_pgdl[6, idn] = mixing_res['TKE']
+    meteo_pgdl[7, idn] = mixing_res['tau']
     meteo_pgdl[8, idn] = np.nanmax(area)
     meteo_pgdl[9, idn] = CC(n)
     meteo_pgdl[10, idn] = ea(n)
