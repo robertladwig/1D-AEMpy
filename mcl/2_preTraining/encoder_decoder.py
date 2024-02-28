@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import pandas as pd
-from tqdm import trange
+from tqdm import trange, tqdm
 import torch
 import torch.nn as nn
 from torch import optim
@@ -290,7 +290,7 @@ class seq2seq(nn.Module):
                 
                 encoder_hidden = self.encoder.init_hidden(config.batch_size)
 
-                for input_batch, target_batch in training_generator:
+                for input_batch, target_batch in tqdm(training_generator):
                    
                     # outputs tensor
                     outputs = torch.zeros(target_batch.shape[0], target_batch.shape[1], target_batch.shape[2], device=self.device)

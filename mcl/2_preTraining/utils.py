@@ -74,11 +74,10 @@ class Utils:
             return df
                 
             # compute mean and std of target variable - to be used for unnormalizing
-        self.y_std = df[self.target_cols].std()[0]
-        self.y_mean = df[self.target_cols].mean()[0]
+        self.y_std = df[self.target_cols].std()
+        self.y_mean = df[self.target_cols].mean()
          
         if len(set(self.inp_cols).intersection(self.target_cols))==0:
-            
             self.feat_mean = df[self.inp_cols].mean()
             self.feat_std = df[self.inp_cols].std()
             
