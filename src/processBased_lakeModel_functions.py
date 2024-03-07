@@ -337,7 +337,11 @@ def provide_meteorology(meteofile, secchifile, windfactor):
     daily_meteo['Ten_Meter_Elevation_Wind_Speed_meterPerSecond'] = daily_meteo['Ten_Meter_Elevation_Wind_Speed_meterPerSecond'] * windfactor # wind speed multiplier
     
     date_time = daily_meteo.date
-
+    
+    # for index in date_time:
+    #     if (index == np.datetime64('NaT')):
+    #         breakpoint()
+    
     daily_meteo['day_of_year_list'] = [t.timetuple().tm_yday for t in date_time]
     daily_meteo['time_of_day_list'] = [t.hour for t in date_time]
     ## light
@@ -1172,6 +1176,7 @@ def diffusion_module(
             # mn[k] = alpha[k-1]/2 * un[k-1] + (1 - alpha[k]) * un[k] + alpha[k+1]/2 * un[k+1]
             #mn[k] = alpha[k] * un[k-1] + (1 - 2 * alpha[k]) * un[k] + alpha[k] * un[k+1]
         
+        #breakpoint()
 
     # DERIVED TEMPERATURE OUTPUT FOR NEXT MODULE
         u = np.linalg.solve(y, mn)
@@ -1218,7 +1223,8 @@ def diffusion_module(
     print("diffusion: " + str(end_time - start_time))
     
     dat = {'temp': u,
-           'diffusivity': kz}
+           'diffusivity': kz,
+           'alpha' : max(alpha)}
     
     return dat
 
@@ -2401,7 +2407,7 @@ def boundary_module(
         IP_m = IP
         
     #npp = p_max * (1 - np.exp(-IP * H/p_max)) * TP * conversion_constant * theta_npp**(u - 20) * volume
-    npp = H * sw_to_par * IP_m * TP  * theta_npp**(u - 20) * volume
+    #npp = H * sw_to_par * IP_m * TP  * theta_npp**(u - 20) * volume
     
     #breakpoint()
     o2 = o2n #+ dt * npp * 32/12 
@@ -2456,7 +2462,7 @@ def boundary_module(
            'pocl':pocl,
            'nutr':nutr,
            'alg':alg,
-           'npp': npp}
+           'npp': -999}
 
     
     return dat
@@ -3038,9 +3044,9 @@ def run_wq_model(
   RH = interp1d(daily_meteo.dt.values, daily_meteo.Relative_Humidity_percent.values, kind = "linear", fill_value=RH_fillvals, bounds_error=False)
   PP_fillvals = tuple(daily_meteo.Precipitation_millimeterPerDay.values[[0,-1]])
   PP = interp1d(daily_meteo.dt.values, daily_meteo.Precipitation_millimeterPerDay.values, kind = "linear", fill_value=PP_fillvals, bounds_error=False)
-  TP_fillvals = tuple(phosphorus_data.tp.values[[0,-1]])
-  TP = interp1d(phosphorus_data.dt.values, phosphorus_data.tp.values, kind = "linear", fill_value=TP_fillvals, bounds_error=False)
-
+  #TP_fillvals = tuple(phosphorus_data.tp.values[[0,-1]])
+  #TP = interp1d(phosphorus_data.dt.values, phosphorus_data.tp.values, kind = "linear", fill_value=TP_fillvals, bounds_error=False)
+  TP = -999
   
   step_times = np.arange(startTime*dt, endTime*dt, dt)
   nCol = len(step_times)
@@ -3115,6 +3121,9 @@ def run_wq_model(
   algae_growthm = np.full([nx, nCol], np.nan)
   algae_grazingm = np.full([nx, nCol], np.nan)
   
+  differrorm= np.full([1,nCol], np.nan)
+  alpham = np.full([1,nCol], np.nan)
+  
   if not kd_light is None:
     def kd(n): # using this shortcut for now / testing if it works
       return kd_light
@@ -3131,10 +3140,20 @@ def run_wq_model(
     Jsw_n = Jsw(n) * sw_factor
     Uw_n = Uw(n) * wind_factor
     
+    if Uw_n == 0:
+        Uw_n = 1e-2
+    
+
     print(idn)
           
     un = deepcopy(u)
     un_initial = un
+    
+    
+    if np.isnan(un).any():
+        breakpoint()
+        
+    
     
     internal_energy_1 = sum(un * calc_dens(un) * area) *dx * 4186
     
@@ -3194,6 +3213,7 @@ def run_wq_model(
     IceSnowAttCoeff = heating_res['IceSnowAttCoeff']
     external_energy = heating_res['external_energy']
     
+ 
     internal_energy_heat = sum(u * calc_dens(u) * area) *dx * 4186
     
     delta_energy_heat = (external_energy/(internal_energy_heat-internal_energy_1))
@@ -3205,6 +3225,10 @@ def run_wq_model(
     # breakpoint()
     
     plt.plot(u, color = 'red')
+    
+    if np.isnan(u).any():
+        breakpoint()
+        
     
     um_heat[:, idn] = u
     
@@ -3248,7 +3272,9 @@ def run_wq_model(
     # breakpoint()
     
     plt.plot(u, color = 'blue')
-    
+    if np.isnan(u).any():
+        breakpoint()
+        
     um_ice[:, idn] = u
     
 
@@ -3258,6 +3284,10 @@ def run_wq_model(
         1+1
     else: 
         kz = u * 0.0
+    
+    if np.isnan(kz).any():
+        breakpoint()
+        
         
     if diffusion_method == 'hendersonSellers':
         kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
@@ -3268,6 +3298,9 @@ def run_wq_model(
     elif diffusion_method == 'pacanowskiPhilander':
         kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
     
+    if np.isnan(kz).any():
+        breakpoint()
+        
     #plt.plot(kz)
     ## (2) DIFFUSION
     diffusion_res = diffusion_module(
@@ -3285,15 +3318,20 @@ def run_wq_model(
     
     u = diffusion_res['temp']
     kz = diffusion_res['diffusivity']
+    alpha = diffusion_res['alpha']
     
     plt.plot(u, color = 'purple')
     
     internal_energy_diff =  sum(u * calc_dens(u) * area) *dx * 4186
     # print(external_energy/(internal_energy_diff-internal_energy_1))
     # breakpoint()
-    
+    if np.isnan(u).any():
+        breakpoint()
+        
     kzm[:,idn] = kz
     um_diff[:, idn] = u
+    differrorm[0, idn] = external_energy/(internal_energy_diff-internal_energy_1)
+    alpham[0, idn] = alpha
 
     
     ## (WQ1) BOUNDARY ADDITION
@@ -3323,7 +3361,7 @@ def run_wq_model(
         Pa= Pa(n),
         RH = RH(n),
         kd_light = kd_light,
-        TP = TP(n),
+        TP = TP,
         Hi = Hi,
         rho_snow = rho_snow,
         Hs = Hs,
@@ -3409,7 +3447,7 @@ def run_wq_model(
         Pa= Pa(n),
         RH = RH(n),
         kd_light = kd_light,
-        TP = TP(n),
+        TP = TP, #TP(n)
         Hi = Hi,
         rho_snow = rho_snow,
         Hs = Hs,
@@ -3470,20 +3508,20 @@ def run_wq_model(
     # print(pocl/volume)
     # breakpoint()
     
-    dens_u_n2 = calc_dens(u)
-    if 'kz' in locals():
-        1+1
-    else: 
-        kz = u * 0.0
+    # dens_u_n2 = calc_dens(u)
+    # if 'kz' in locals():
+    #     1+1
+    # else: 
+    #     kz = u * 0.0
         
-    if diffusion_method == 'hendersonSellers':
-        kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
-    elif diffusion_method == 'munkAnderson':
-        kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, Cd, u, kz) / 1
-    elif diffusion_method == 'hondzoStefan':
-        kz = eddy_diffusivity(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, u, kz) / 86400
-    elif diffusion_method == 'pacanowskiPhilander':
-        kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+    # if diffusion_method == 'hendersonSellers':
+    #     kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+    # elif diffusion_method == 'munkAnderson':
+    #     kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, Cd, u, kz) / 1
+    # elif diffusion_method == 'hondzoStefan':
+    #     kz = eddy_diffusivity(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, u, kz) / 86400
+    # elif diffusion_method == 'pacanowskiPhilander':
+    #     kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
     
     ## (WQ3) TRANSPORT
     transport_res = transport_module(
@@ -3553,6 +3591,9 @@ def run_wq_model(
     internal_energy_conv = sum(u * calc_dens(u) * area) *dx * 4186
     # print(external_energy/(internal_energy_conv-internal_energy_1))
     # breakpoint()
+    if np.isnan(u).any():
+        breakpoint()
+        
     
     plt.plot(u, color = 'black')
     
@@ -3608,6 +3649,9 @@ def run_wq_model(
     # pocl = pocl
     # alg = alg
     # nutr = nutr
+    if np.isnan(u).any():
+        breakpoint()
+        
 
     um_mix[:, idn] = u
     thermo_depm[0,idn] = thermo_dep
@@ -3748,7 +3792,9 @@ def run_wq_model(
                'pocl_respiration': pocl_respirationm,
                'kd_light': kd_lightm,
                'thermo_dep': thermo_depm,
-               'energy_ratio': energy_ratiom}
+               'energy_ratio': energy_ratiom,
+               'differror': differrorm,
+               'alpha' : alpham}
   
   return(dat)
 
