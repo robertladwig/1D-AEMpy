@@ -705,7 +705,7 @@ if pgdl_mode == 'on':
     df.to_csv('../../lakes/erken/output/py_icesnow.csv', index=None)
     
     # observed data
-    dt = pd.read_csv('../../lakes/erken/observed.csv', index_col=0)
+    dt = pd.read_csv('../../lakes/erken/observed_interp.csv', index_col=0)
     dt=dt.rename(columns = {'DateTime':'time'})
     dt['time'] = pd.to_datetime(dt['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
     dt_red = dt[dt['time'] >= startingDate]
@@ -713,12 +713,12 @@ if pgdl_mode == 'on':
     
     # let's set surface to 0 if airtemp is below 0, assuming we have ice
     temp_flag = df_airtemp <= 0
-    wtr_0m = np.array(dt_red['var. 0'])
-    wtr_05m = np.array(dt_red['var. 0.5'])
+    wtr_0m = np.array(dt_red['var..0'])
+    wtr_05m = np.array(dt_red['var..0.5'])
     wtr_0m[temp_flag] = 0
     wtr_05m[temp_flag] = 0
-    dt_red['var. 0'] = wtr_0m
-    dt_red['var. 0.5'] = wtr_05m 
+    dt_red['var..0'] = wtr_0m
+    dt_red['var..0.5'] = wtr_05m 
     dt_red.to_csv('../../lakes/erken/output/py_observed_temp.csv', index=None, na_rep='-999')
     
     dt_notime = dt_red.drop(dt_red.columns[[0]], axis = 1)

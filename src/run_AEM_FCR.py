@@ -8,6 +8,7 @@ import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
 from numba import jit
+from datetime import timedelta
 
 #os.chdir("/home/robert/Projects/1D-AEMpy/src")
 #os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
@@ -17,41 +18,54 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 
 ## lake configurations
-zmax = 85 # maximum lake depth
-nx = 85 * 2 # number of layers we will have
+zmax = 9 # maximum lake depth
+nx = 9 * 2 # number of layers we will have
 dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
 ## area and depth values of our lake 
-area, depth, volume = get_hypsography(hypsofile = '../../lakes/rappbode/bathymetry.csv',
+area, depth, volume = get_hypsography(hypsofile = '../../lakes/fallingcreek/bathymetry.csv',
                             dx = dx, nx = nx)
                            
 ## atmospheric boundary conditions
-meteo_all = provide_meteorology(meteofile = '../../lakes/rappbode/meteodriverdata.csv',
+meteo_all = provide_meteorology(meteofile = '../../lakes/fallingcreek/meteodriverdata.csv',
                     secchifile = None, 
                     windfactor = 1.0)
                      
+meteo_check = meteo_all[0]
+list(meteo_check.columns)
+np.count_nonzero(np.isnan(meteo_check.ea.values))
+np.count_nonzero(np.isnan(meteo_check.Air_Temperature_celsius.values))
+np.count_nonzero(np.isnan(meteo_check.Shortwave_Radiation_Downwelling_wattPerMeterSquared.values))
+np.count_nonzero(np.isnan(meteo_check.Longwave_Radiation_Downwelling_wattPerMeterSquared.values))
+np.count_nonzero(np.isnan(meteo_check.Relative_Humidity_percent.values))
+np.count_nonzero(np.isnan(meteo_check.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values))
+np.count_nonzero(np.isnan(meteo_check.Precipitation_millimeterPerDay.values))
+np.count_nonzero(np.isnan(meteo_check.Surface_Level_Barometric_Pressure_pascal.values))
+np.count_nonzero(np.isnan(meteo_check.Cloud_Cover.values))
+
 ## time step discretization                      
 hydrodynamic_timestep = 24 * dt
-total_runtime =  (365 * 6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
-startTime =  1  #150 * 24 * 3600  (120 + 365*5)
+total_runtime =  (365 * 5) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+startTime =  161*24 +10 #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
 startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
 endingDate = meteo_all[0]['date'][(endTime-1)]#meteo_all[0]['date'][(startTime + total_runtime)]# * hydrodynamic_timestep/dt -1]
+endingDate = startingDate + timedelta(hours = endTime - startTime -1)
 
 times = pd.date_range(startingDate, endingDate, freq='H')
 
 nTotalSteps = int(total_runtime)
 
 ## here we define our initial profile
-dt_da = pd.read_csv('../../lakes/rappbode/observed.csv', index_col=0)
+dt_da = pd.read_csv('../../lakes/fallingcreek/observed.csv', index_col=0)
 dt_da=dt_da.rename(columns = {'DateTime':'time'})
 dt_da['time'] = pd.to_datetime(dt_da['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
 dt_red = dt_da[dt_da['time'] >= startingDate]
 dt_red = dt_red[dt_red['time'] <= endingDate]
 u_ini = dt_red.iloc[0,1:].to_numpy()
-u_ini = u_ini[0:(len(u_ini)-2)]
+u_ini = u_ini[0:(len(u_ini)-1)]
 
 u_ini =pd.to_numeric(u_ini,errors='coerce')
 
@@ -106,7 +120,7 @@ res = run_wq_model(
     km = 1.4 * 10**(-7), # 4 * 10**(-6), 
     k0 = 1 * 10**(-2), #1e-2
     weight_kz = 0.5,
-    kd_light = 0.5, 
+    kd_light = 1.3, 
     denThresh = 1e-2,
     albedo = 0.1,
     eps = 0.97,
@@ -192,6 +206,8 @@ pocl_respiration = res['pocl_respiration']
 kd = res['kd_light']
 thermo_dep = res['thermo_dep']
 energy_ratio = res['energy_ratio']
+differror = res['differror']
+alpha = res['alpha']
 
 
 End = datetime.datetime.now()
@@ -199,6 +215,15 @@ print(End - Start)
 
     
 plt.plot(times, energy_ratio[0,:])
+plt.show()
+
+plt.plot(times, differror[0,:])
+plt.show()
+
+plt.plot(times, alpha[0,:])
+plt.show()
+
+plt.plot(differror[0,:], alpha[0,:])
 plt.show()
 
 # heatmap of temps  
@@ -583,7 +608,7 @@ if pgdl_mode == 'on':
     df1.insert(2, "Osgood", df_osgood, True)
     df1.insert(3, "MaxDepth_m", df_maxdepth, True)
     df1.insert(4, "MeanDepth_m", df_meandepth, True)
-    df1.to_csv('../../lakes/rappbode/output/py_lakecharacteristics.csv', index=None)
+    df1.to_csv('../../lakes/fallingcreek/output/py_lakecharacteristics.csv', index=None)
     
     # initial temp.
     df1 = pd.DataFrame(times)
@@ -592,7 +617,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_temp_initial00.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_temp_initial00.csv', index=None)
     
     # heat temp.
     df1 = pd.DataFrame(times)
@@ -601,7 +626,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_temp_heat01.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_temp_heat01.csv', index=None)
     
     # diffusion temp.
     df1 = pd.DataFrame(times)
@@ -610,7 +635,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_temp_diff03.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_temp_diff03.csv', index=None)
     
     # mixing temp.
     df1 = pd.DataFrame(times)
@@ -619,7 +644,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_temp_mix05.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_temp_mix05.csv', index=None)
     
     # convection temp.
     df1 = pd.DataFrame(times)
@@ -628,7 +653,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_temp_conv04.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_temp_conv04.csv', index=None)
     
     # ice temp.
     df1 = pd.DataFrame(times)
@@ -637,7 +662,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_temp_ice02.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_temp_ice02.csv', index=None)
     
     # diffusivity
     df1 = pd.DataFrame(times)
@@ -646,7 +671,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_diff.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_diff.csv', index=None)
     
     # buoyancy
     df1 = pd.DataFrame(times)
@@ -655,7 +680,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_buoyancy.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_buoyancy.csv', index=None)
     
     # meteorology
     df1 = pd.DataFrame(times)
@@ -672,7 +697,7 @@ if pgdl_mode == 'on':
                       'dt_iceon_avg_prior', 'icemovAvg_prior']
     df = pd.concat([df1, df2], axis = 1)
     df_airtemp = df['AirTemp_degC']
-    df.to_csv('../../lakes/rappbode/output/py_meteorology_input.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_meteorology_input.csv', index=None)
     
         
     # ice-snow
@@ -691,10 +716,10 @@ if pgdl_mode == 'on':
     df4 = pd.DataFrame(t1)
     df4.columns = ['snowice']
     df = pd.concat([df1, df2, df3, df4], axis = 1)
-    df.to_csv('../../lakes/rappbode/output/py_icesnow.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_icesnow.csv', index=None)
     
     # observed data
-    dt = pd.read_csv('../../lakes/rappbode/observed_interp.csv', index_col=0)
+    dt = pd.read_csv('../../lakes/fallingcreek/observed_interp.csv', index_col=0)
     dt=dt.rename(columns = {'DateTime':'time'})
     dt['time'] = pd.to_datetime(dt['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
     dt_red = dt[dt['time'] >= startingDate]
@@ -708,7 +733,7 @@ if pgdl_mode == 'on':
     wtr_05m[temp_flag] = 0
     dt_red['var..0'] = wtr_0m
     dt_red['var..0.5'] = wtr_05m 
-    dt_red.to_csv('../../lakes/rappbode/output/py_observed_temp.csv', index=None, na_rep='-999')
+    dt_red.to_csv('../../lakes/fallingcreek/output/py_observed_temp.csv', index=None, na_rep='-999')
     
     dt_notime = dt_red.drop(dt_red.columns[[0]], axis = 1)
     dt_notime = dt_notime.transpose()
@@ -717,7 +742,7 @@ if pgdl_mode == 'on':
     temp.shape
     
     dt_obs=dt_obs[:-1,:]
-    dt_obs=dt_obs[:-1,:]
+    #dt_obs=dt_obs[:-1,:]
     dt_obs.shape
     # heatmap of temps  
 
@@ -792,27 +817,27 @@ if pgdl_mode == 'on':
     axs[0].plot(times, dt_obs[0,:], color ='red', label = 'observed')
     axs[0].plot(times, temp[0,:], label = 'modeled')
     axs[0].set_title(depth[0])
-    axs[0].set_ylim(0,25)
+    axs[0].set_ylim(0,35)
     
-    axs[1].plot(times, dt_obs[10,:], color ='red')
-    axs[1].plot(times, temp[10,:])
-    axs[1].set_title(depth[10])
-    axs[1].set_ylim(0,25)
+    axs[1].plot(times, dt_obs[3,:], color ='red')
+    axs[1].plot(times, temp[3,:])
+    axs[1].set_title(depth[3])
+    axs[1].set_ylim(0,35)
     
-    axs[2].plot(times, dt_obs[25,:], color ='red')
-    axs[2].plot(times, temp[25,:])
-    axs[2].set_title(depth[25])
+    axs[2].plot(times, dt_obs[8,:], color ='red')
+    axs[2].plot(times, temp[8,:])
+    axs[2].set_title(depth[8])
     axs[2].set_ylim(0,25)
     
-    axs[3].plot(times, dt_obs[37*2,:], color ='red')
-    axs[3].plot(times, temp[37*2,:])
-    axs[3].set_title(depth[37*2])
-    axs[3].set_ylim(0,10)
+    axs[3].plot(times, dt_obs[13,:], color ='red')
+    axs[3].plot(times, temp[13,:])
+    axs[3].set_title(depth[13])
+    axs[3].set_ylim(0,20)
     
-    axs[4].plot(times, dt_obs[48*2,:], color ='red')
-    axs[4].plot(times, temp[48*2,:])
-    axs[4].set_title(depth[48*2])
-    axs[4].set_ylim(0,10)
+    axs[4].plot(times, dt_obs[16,:], color ='red')
+    axs[4].plot(times, temp[16,:])
+    axs[4].set_title(depth[16])
+    axs[4].set_ylim(0,20)
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     fig.legend(lines, labels)
