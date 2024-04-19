@@ -352,3 +352,22 @@ class Utils:
         
         rmse = loss**0.5
         return rmse
+    def normalize_numpy(self, data, use_stat=False, feat_or_target="feat"):
+        eps = 1e-10
+        
+        if use_stat:
+            if feat_or_target=="feat":
+                data = (data - self.feat_mean) / (self.feat_std + eps)
+            else:
+                data = (data - self.y_mean) / (self.y_std + eps)
+        else:
+            if feat_or_target=="feat":
+                self.feat_mean = np.nanmean(data, axis=(0, 1))
+                self.feat_std = np.nanstd(data, axis=(0, 1))
+                data = (data - self.feat_mean) / (self.feat_std + eps)
+            else:
+                self.y_mean = np.nanmean(data, axis=(0, 1))
+                self.y_std = np.nanstd(data, axis=(0, 1))
+                data = (data - self.y_mean) / (self.y_std + eps)
+
+        return data
