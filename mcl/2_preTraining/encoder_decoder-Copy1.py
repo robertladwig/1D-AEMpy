@@ -278,19 +278,6 @@ class seq2seq(nn.Module):
         
         wandb.watch(self.encoder)
         
-
-        #with trange(n_epochs) as tr:
-        #    for it in tr:
-
-        #        batch_loss = 0.
-        #        batch_loss_tf = 0.
-        #        batch_loss_no_tf = 0.
-        #        num_tf = 0
-        #        num_no_tf = 0
-                # batch_test_loss = np.nan
-                
-        #        encoder_hidden = self.encoder.init_hidden(config.batch_size)
-                
         with trange(n_epochs) as tr:
             for it in tr:
 
@@ -305,16 +292,8 @@ class seq2seq(nn.Module):
 
                 for input_batch, target_batch in tqdm(training_generator):
                    
-                    input_batch = input_batch.to(device=self.device)
-                    target_batch = target_batch.to(device=self.device)
-
                     # outputs tensor
                     outputs = torch.zeros(target_batch.shape[0], target_batch.shape[1], target_batch.shape[2], device=self.device)
-
-                #for input_batch, target_batch in tqdm(training_generator):
-                   
-                    # outputs tensor
-                #    outputs = torch.zeros(target_batch.shape[0], target_batch.shape[1], target_batch.shape[2], device=self.device)
                     # initialize hidden state
                     #encoder_hidden = self.encoder.init_hidden(batch_size)
 
