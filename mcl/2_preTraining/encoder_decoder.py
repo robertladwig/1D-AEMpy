@@ -266,8 +266,8 @@ class seq2seq(nn.Module):
                   'shuffle': config.batch_shuffle
                 }
         
-        X_train, Y_train = X_train.to(self.device), Y_train.to(self.device)
-        X_test, Y_test = X_test.to(self.device), Y_test.to(self.device)
+        #X_train, Y_train = X_train.to(self.device), Y_train.to(self.device)
+        #X_test, Y_test = X_test.to(self.device), Y_test.to(self.device)
         
         # Generators
         training_set = Dataset(X_train, Y_train)
