@@ -307,6 +307,9 @@ class seq2seq(nn.Module):
                    
                     input_batch = input_batch.to(device=self.device)
                     target_batch = target_batch.to(device=self.device)
+                    
+                    input_batch = input_batch.cuda()
+                    target_batch = target_batch.cuda()
 
                     # outputs tensor
                     outputs = torch.zeros(target_batch.shape[0], target_batch.shape[1], target_batch.shape[2], device=self.device)
