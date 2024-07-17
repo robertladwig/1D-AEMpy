@@ -711,6 +711,8 @@ if pgdl_mode == 'on':
     dt_red = dt[dt['time'] >= startingDate]
     dt_red = dt_red[dt_red['time'] <= endingDate]
     
+    dt_red.head
+    
     # let's set surface to 0 if airtemp is below 0, assuming we have ice
     temp_flag = df_airtemp <= 0
     wtr_0m = np.array(dt_red['var..0'])
@@ -719,15 +721,28 @@ if pgdl_mode == 'on':
     wtr_05m[temp_flag] = 0
     dt_red['var..0'] = wtr_0m
     dt_red['var..0.5'] = wtr_05m 
+    
+    #dt_red=dt_red[:-1,:]
+    
+    print(dt_red.shape)
+    dt_red.drop(dt_red.columns[len(dt_red.columns)-1], axis=1, inplace=True)
+    print(dt_red.shape)
+    print(dt_red)
+    
     dt_red.to_csv('../../lakes/erken/output/py_observed_temp.csv', index=None, na_rep='-999')
     
     dt_notime = dt_red.drop(dt_red.columns[[0]], axis = 1)
     dt_notime = dt_notime.transpose()
     dt_obs = dt_notime.to_numpy()
+    dt_red.shape
     dt_obs.shape
     temp.shape
     
-    dt_obs=dt_obs[:-1,:]
+    print(dt_obs[:10])
+    dt_obs[-1,:]
+    
+    #dt_obs=dt_obs[:-1,:]
+    print(dt_obs[:10])
     #dt_obs=dt_obs[:-1,:]
     dt_obs.shape
     # heatmap of temps  

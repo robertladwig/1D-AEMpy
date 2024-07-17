@@ -33,7 +33,7 @@ meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
                      
 ## time step discretization                      
 hydrodynamic_timestep = 24 * dt
-total_runtime =  (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+total_runtime =  150* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
 startTime =   (140 + 365*6) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
@@ -197,6 +197,28 @@ plt.show()
 N_pts = 6
 
 
+fig, ax = plt.subplots(figsize=(20,15))
+sns.heatmap(temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+           colors=['black', 'gray'],
+           linestyles = 'dotted')
+ax.set_ylabel("Depth (m)", fontsize=15)
+ax.set_xlabel("", fontsize=15)    
+ax.collections[0].colorbar.set_label("Water temperature  ($^\circ$C)")
+xticks_ix = np.array(ax.get_xticks()).astype(int)
+time_label = times[xticks_ix]
+nelement = len(times)//2
+time_label = times[::nelement]
+#time_label = time_label[::nelement]
+#ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+time_label = times[np.array(ax.get_xticks()).astype(int)]
+ax.set_xticklabels(time_label, rotation=15)
+yticks_ix = np.array(ax.get_yticks()).astype(int)
+depth_label = yticks_ix / 2
+ax.set_yticklabels(depth_label, rotation=0)
+plt.rcParams.update({'font.size': 30})
+plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/lakemodel.png', transparent=True)
+plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
 sns.heatmap(temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)

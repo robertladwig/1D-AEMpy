@@ -720,6 +720,34 @@ if pgdl_mode == 'on':
     dt_obs=dt_obs[:-1,:]
     dt_obs.shape
     # heatmap of temps  
+    
+    # observed data
+    dt = pd.read_csv('../../lakes/rappbode/observed_interp.csv', index_col=0)
+    dt=dt.rename(columns = {'DateTime':'time'})
+    dt['time'] = pd.to_datetime(dt['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
+    dt_red = dt[dt['time'] >= startingDate]
+    dt_red = dt_red[dt_red['time'] <= endingDate]
+    
+    dt_red.head
+    
+    # let's set surface to 0 if airtemp is below 0, assuming we have ice
+    temp_flag = df_airtemp <= 0
+    wtr_0m = np.array(dt_red['var..0'])
+    wtr_05m = np.array(dt_red['var..0.5'])
+    wtr_0m[temp_flag] = 0
+    wtr_05m[temp_flag] = 0
+    dt_red['var..0'] = wtr_0m
+    dt_red['var..0.5'] = wtr_05m 
+    
+    #dt_red=dt_red[:-1,:]
+    
+    print(dt_red.shape)
+    dt_red.drop(dt_red.columns[len(dt_red.columns)-1], axis=1, inplace=True)
+    dt_red.drop(dt_red.columns[len(dt_red.columns)-1], axis=1, inplace=True)
+    print(dt_red.shape)
+    print(dt_red)
+    
+    dt_red.to_csv('../../lakes/rappbode/output/py_observed_temp.csv', index=None, na_rep='-999')
 
     
     diff_temp = temp - dt_obs

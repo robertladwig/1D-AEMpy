@@ -225,7 +225,7 @@ Note
 <p>To replicate a lag in the mixing dynamics, we set the values of <span class="math inline">K_z</span> to the average between the current profile and the one from the previous time step (<span class="citation" data-cites="piccolroaz_deep_2013">Piccolroaz and Toffolon (<a href="#ref-piccolroaz_deep_2013" role="doc-biblioref">2013</a>)</span>).</p>
 <section id="numerical-implementation" class="level4">
 <h4 class="anchored" data-anchor-id="numerical-implementation">Numerical implementation</h4>
-<p>The implicit Crnak-Nicolson scheme, whichis second-order derivative in space and time, was applied to solve the one-dimensional temperature transport equation for the diffusive transport. Here, we average the response in space between the current and the next time step: <span class="math display">
+<p>The implicit Crank-Nicolson scheme, whichis second-order derivative in space and time, was applied to solve the one-dimensional temperature transport equation for the diffusive transport. Here, we average the response in space between the current and the next time step: <span class="math display">
 A \frac{\partial T}{\partial t}=A K_z \frac{\partial T}{\partial z}
 </span> <span class="math display">
 A \frac{T_i^{n+1} - T_i^n}{\Delta t} = \frac{1}{2} [A K_z \frac{T_{i+1}^{n+1} - 2 T_i^{n+1} + T_{i-1}^{n+1}}{\Delta z^2} +  A K_z \frac{T_{i+1}^{n} - 2 T_i^n + T_{i-1}^n}{\Delta z^2}]
