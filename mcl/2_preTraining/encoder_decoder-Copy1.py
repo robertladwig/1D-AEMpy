@@ -266,8 +266,8 @@ class seq2seq(nn.Module):
                   'shuffle': config.batch_shuffle
                 }
         
-        #X_train, Y_train = X_train.to(self.device), Y_train.to(self.device)
-        #X_test, Y_test = X_test.to(self.device), Y_test.to(self.device)
+        X_train, Y_train = X_train.to(self.device), Y_train.to(self.device)
+        X_test, Y_test = X_test.to(self.device), Y_test.to(self.device)
         
         # Generators
         training_set = Dataset(X_train, Y_train)
@@ -278,19 +278,6 @@ class seq2seq(nn.Module):
         
         wandb.watch(self.encoder)
         
-
-        #with trange(n_epochs) as tr:
-        #    for it in tr:
-
-        #        batch_loss = 0.
-        #        batch_loss_tf = 0.
-        #        batch_loss_no_tf = 0.
-        #        num_tf = 0
-        #        num_no_tf = 0
-                # batch_test_loss = np.nan
-                
-        #        encoder_hidden = self.encoder.init_hidden(config.batch_size)
-                
         with trange(n_epochs) as tr:
             for it in tr:
 
@@ -305,19 +292,8 @@ class seq2seq(nn.Module):
 
                 for input_batch, target_batch in tqdm(training_generator):
                    
-                    input_batch = input_batch.to(device=self.device)
-                    target_batch = target_batch.to(device=self.device)
-                    
-                    # input_batch = input_batch.cuda()
-                    # target_batch = target_batch.cuda()
-
                     # outputs tensor
                     outputs = torch.zeros(target_batch.shape[0], target_batch.shape[1], target_batch.shape[2], device=self.device)
-
-                #for input_batch, target_batch in tqdm(training_generator):
-                   
-                    # outputs tensor
-                #    outputs = torch.zeros(target_batch.shape[0], target_batch.shape[1], target_batch.shape[2], device=self.device)
                     # initialize hidden state
                     #encoder_hidden = self.encoder.init_hidden(batch_size)
 
@@ -326,7 +302,6 @@ class seq2seq(nn.Module):
 
                     # encoder outputs
                     encoder_output, encoder_hidden = self.encoder(input_batch)
-                    # print("CKPT 1")
                     
                     # decoder with teacher forcing
                     # TODO: first input to decoder - shape: (batch_size, input_size)
@@ -369,8 +344,7 @@ class seq2seq(nn.Module):
                             # predict recursively
                             else:
                                 decoder_input = decoder_output
-                    
-                    # print("CKPT 2")
+
                     # compute the loss
                     loss = criterion(outputs, target_batch)
                     batch_loss += loss.item()
@@ -379,7 +353,6 @@ class seq2seq(nn.Module):
                     loss.backward()
                     optimizer.step()
                     scheduler.step()
-                    # print("Done optimizing, keep movin")
 
                 # loss for epoch
                 batch_loss /= n_batches
@@ -390,8 +363,8 @@ class seq2seq(nn.Module):
                     config.teacher_forcing_ratio = config.teacher_forcing_ratio - 0.002
 
                 if it % config.eval_freq == 0:
-                    test_eval_dict = self.evaluate_batch(test_generator=validation_generator)#(X_test=X_test, Y_test=Y_test)
-                    train_eval_dict = self.evaluate_batch(test_generator=training_generator)#(X_test=X_train, Y_test=Y_train)
+                    test_eval_dict = self.evaluate_batch(X_test=X_test, Y_test=Y_test)
+                    train_eval_dict = self.evaluate_batch(X_test=X_train, Y_test=Y_train)
 
                     batch_test_loss = test_eval_dict["rmse"].item()
                     batch_train_loss = train_eval_dict["rmse"].item()
@@ -409,12 +382,11 @@ class seq2seq(nn.Module):
                         "train_rmse":batch_train_loss
                         }
                 # tr.set_postfix(loss="{0:.3e}".format(batch_loss))
-                if it % 1000 == 0:
-                    tr.set_postfix(metrics)
+                tr.set_postfix(metrics)
                 wandb.log(metrics)
         
-        test_eval_dict = self.evaluate_batch(test_generator=validation_generator)#X_test=X_test, Y_test=Y_test)
-        train_eval_dict = self.evaluate_batch(test_generator=training_generator)#X_test=X_train, Y_test=Y_train)
+        test_eval_dict = self.evaluate_batch(X_test=X_test, Y_test=Y_test)
+        train_eval_dict = self.evaluate_batch(X_test=X_train, Y_test=Y_train)
         wandb.summary['test_rmse'] = test_eval_dict["rmse"].item()
         wandb.summary['train_rmse'] = train_eval_dict["rmse"].item()
         wandb.finish()
@@ -422,43 +394,32 @@ class seq2seq(nn.Module):
         return losses, test_rmse, train_rmse
 
     
-    def predict_batch(self, test_generator, target_len):# input_tensor, target_len):
+    def predict_batch(self, input_tensor, target_len):
         '''
         : param input_tensor:      input data (batch, seq_len, input_size); PyTorch tensor
         : param target_len:        number of target values to predict (30)
         : return np_outputs:       np.array containing predicted values; prediction done recursively
         '''
-        predictions = []
-        ground_truth = []
+        batch_size = input_tensor.shape[0]
         
-        for input_tensor, target_tensor in tqdm(test_generator):
-            
-            input_tensor = input_tensor.to(device=self.device)
-            target_tensor = target_tensor.to(device=self.device)
-            
-            batch_size = input_tensor.shape[0]
-
-            encoder_output, encoder_hidden = self.encoder(input_tensor)
-
-            outputs = torch.zeros(batch_size, target_len, self.output_size, device=self.device)  # input_tensor.shape[2])
-            ground_truth.append(target_tensor)
-            
-            decoder_input = torch.zeros(batch_size, self.output_size, device=self.device)  # input_tensor[-1, :, :]%%!
-            decoder_hidden = encoder_hidden
-
-            for t in range(target_len):
-                decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
-                outputs[:,t,:] = decoder_output
-                decoder_input = decoder_output
-
-#             np_outputs = outputs.detach()
-            predictions.append(outputs.detach())
+        encoder_output, encoder_hidden = self.encoder(input_tensor)
         
-        return torch.cat(predictions, axis=0), torch.cat(ground_truth, axis=0)
+        outputs = torch.zeros(batch_size, target_len, self.output_size, device=self.device)  # input_tensor.shape[2])
+        
+        decoder_input = torch.zeros(batch_size, self.output_size, device=self.device)  # input_tensor[-1, :, :]%%!
+        decoder_hidden = encoder_hidden
+        
+        for t in range(target_len):
+            decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+            outputs[:,t,:] = decoder_output
+            decoder_input = decoder_output
     
-    def evaluate_batch(self, test_generator, unnorm=True):#X_test=None, Y_test=None, unnorm=True):
+        np_outputs = outputs.detach()
+        return np_outputs
     
-        y_pred, Y_test = self.predict_batch(test_generator=test_generator, target_len=self.utils.output_window)
+    def evaluate_batch(self, X_test=None, Y_test=None, unnorm=True):
+    
+        y_pred = self.predict_batch(X_test, self.utils.output_window)
         
         if unnorm:
             # unnormalize the data
