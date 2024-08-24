@@ -120,12 +120,12 @@ $$
 $$
 A \frac{T_i^{n+1} - T_i^n}{\Delta t} = \frac{1}{2} [A K_z \frac{T_{i+1}^{n+1} - 2 T_i^{n+1} + T_{i-1}^{n+1}}{\Delta z^2} +  A K_z \frac{T_{i+1}^{n} - 2 T_i^n + T_{i-1}^n}{\Delta z^2}]
 $$
-Here, we can apply $\alpha = A K_z \frac{\Delta t}{\Delta z^2}$, transforming the equation to:
+Here, we can apply $\alpha = A K_z \frac{\Delta t}{A \Delta z^2}$, transforming the equation to:
 $$
-- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} =\frac{\alpha}{2} T_{i+1}^{n} + (A-\alpha)T_{i}^{n}+ \frac{\alpha}{2}T_{i-1}^{n}
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (1+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} =\frac{\alpha}{2} T_{i+1}^{n} + (1-\alpha)T_{i}^{n}+ \frac{\alpha}{2}T_{i-1}^{n}
 $$
 $$
-- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} = R_i^n
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (1+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} = R_i^n
 $$
 where the right-hand side quantity $R_i^n$ is known at the beginning of each time step.
 

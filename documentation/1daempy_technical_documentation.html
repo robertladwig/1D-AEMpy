@@ -229,10 +229,10 @@ Note
 A \frac{\partial T}{\partial t}=A K_z \frac{\partial T}{\partial z}
 </span> <span class="math display">
 A \frac{T_i^{n+1} - T_i^n}{\Delta t} = \frac{1}{2} [A K_z \frac{T_{i+1}^{n+1} - 2 T_i^{n+1} + T_{i-1}^{n+1}}{\Delta z^2} +  A K_z \frac{T_{i+1}^{n} - 2 T_i^n + T_{i-1}^n}{\Delta z^2}]
-</span> Here, we can apply <span class="math inline">\alpha = A K_z \frac{\Delta t}{\Delta z^2}</span>, transforming the equation to: <span class="math display">
-- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} =\frac{\alpha}{2} T_{i+1}^{n} + (A-\alpha)T_{i}^{n}+ \frac{\alpha}{2}T_{i-1}^{n}
+</span> Here, we can apply <span class="math inline">\alpha = A K_z \frac{\Delta t}{A \Delta z^2}</span>, transforming the equation to: <span class="math display">
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (1+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} =\frac{\alpha}{2} T_{i+1}^{n} + (1-\alpha)T_{i}^{n}+ \frac{\alpha}{2}T_{i-1}^{n}
 </span> <span class="math display">
-- \frac{\alpha}{2} T_{i+1}^{n+1} + (A+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} = R_i^n
+- \frac{\alpha}{2} T_{i+1}^{n+1} + (1+\alpha)T_{i}^{n+1}- \frac{\alpha}{2}T_{i-1}^{n+1} = R_i^n
 </span> where the right-hand side quantity <span class="math inline">R_i^n</span> is known at the beginning of each time step.</p>
 <p>In the current version, we asusme static Dirichlet boundary conditions for the diffusive transport, which transforms the equation into a matrix (given here for an example for 5 times 5 rows and columns): <span class="math display">
 \begin{bmatrix}
