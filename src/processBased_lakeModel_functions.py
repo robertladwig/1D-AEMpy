@@ -310,7 +310,7 @@ def provide_meteorology(meteofile, secchifile, windfactor):
 
     meteo = pd.read_csv(meteofile)
     daily_meteo = meteo
-    daily_meteo['date'] = pd.to_datetime(daily_meteo['datetime'])
+    daily_meteo['date'] = pd.to_datetime(daily_meteo['datetime'],  format = '%Y-%m-%d %H:%M:%S')
     daily_meteo['Cloud_Cover'] = calc_cc(date = daily_meteo['date'],
                                                 airt = daily_meteo['Air_Temperature_celsius'],
                                                 relh = daily_meteo['Relative_Humidity_percent'],
@@ -1032,7 +1032,7 @@ def heating_module(
    
     # ax = plt.gca()
     # plt.plot((u_2), depth_2, color = 'blue', linestyle='dashed')
-    # plt.plot(u, depth, color = 'red', linestyle='dashed')
+    # plt.plot(depth,u, depth, color = 'red', linestyle='dashed')
     # plt.scatter((u_2), depth_2, color = 'blue', linestyle='dashed')
     # plt.scatter(u, depth, color = 'red', linestyle='dashed')
     # plt.title(dx)
@@ -1126,7 +1126,10 @@ def diffusion_module(
             print('Warning: alpha > 1')
             print("Warning: ",max(alpha)," > 1")
             
-            alpha[alpha > 1] = max(alpha[alpha < 1])
+            if all(alpha > 1):
+                alpha = alpha
+            else:
+                alpha[alpha > 1] = max(alpha[alpha < 1])
             
         # alpha = (area * kzn * dt) / (dx**2)
         
@@ -1166,7 +1169,7 @@ def diffusion_module(
         #y[0,1] = -alpha[1]
 
         #mn[0] = (1 - alpha[0])  * un[0] + alpha[0+1] * un[0+1]
-        mn[-1] = (1 - alpha[-1])  * un[-1] + alpha[-1 -1] * un[-1-1]
+        #mn[-1] = (1 - alpha[-1])  * un[-1] + alpha[-1 -1] * un[-1-1]
         
         #mn[0] = (1- 2 * alpha[0])  * un[0] + 2* alpha[0+1] * un[0+1]
         #mn[-1] = (1 - 2 * alpha[-1])  * un[-1] + 2* alpha[-1 -1] * un[-1-1]
@@ -1214,7 +1217,7 @@ def diffusion_module(
     #         22.75, 23.25, 23.75, 24.25, 24.75])
     # ax = plt.gca()
     # plt.plot((u_2), depth_2, color = 'blue', linestyle='dashed')
-    # plt.plot(u, depth, color = 'red', linestyle='dashed')
+    # plt.plot(depth,u, depth, color = 'red', linestyle='dashed')
     # plt.scatter((u_2), depth_2, color = 'blue', linestyle='dashed')
     # plt.scatter(u, depth, color = 'red', linestyle='dashed')
     # plt.title(dx)
@@ -1715,7 +1718,7 @@ def mixing_module_minlake(
             KE = 0
             WmixIndicator = 0
         #print(KE)
-        # plt.plot(u)
+        # plt.plot(depth,u)
         
             
 
@@ -2395,6 +2398,7 @@ def boundary_module(
     pocl = pocln
     alg = algn
 
+    #breakpoint()
     # light attenuation
     
     if ice:
@@ -3246,6 +3250,8 @@ def run_wq_model(
   #TP = interp1d(phosphorus_data.dt.values, phosphorus_data.tp.values, kind = "linear", fill_value=TP_fillvals, bounds_error=False)
   TP = -999
   
+  #breakpoint()
+  
   step_times = np.arange(startTime*dt, endTime*dt, dt)
   nCol = len(step_times)
   um = np.full([nx, nCol], np.nan)
@@ -3327,7 +3333,7 @@ def run_wq_model(
       return kd_light
 
   
-  
+
   #breakpoint()
   #times = np.arange(startTime, endTime, dt)
   times = np.arange(startTime * dt, endTime * dt, dt)
@@ -3337,6 +3343,12 @@ def run_wq_model(
     Tair_n = Tair(n) * at_factor
     Jsw_n = Jsw(n) * sw_factor
     Uw_n = Uw(n) * wind_factor
+    
+    # print(n)
+    # print(Tair_n)
+    # print(Jsw_n)
+    # print(Uw_n)
+    # breakpoint()
     
     if Uw_n == 0:
         Uw_n = 1e-2
@@ -3377,7 +3389,7 @@ def run_wq_model(
     pocr_initial[:, idn] = pocr
     pocl_initial[:, idn] = pocl
     alg_initial[:, idn] = pocr
-    nutr_initial[:, idn] = pocl
+    nutr_initial[:, idn] = nutr
     
     # breakpoint()
     ## (1) HEATING
@@ -3422,7 +3434,7 @@ def run_wq_model(
     # print(external_energy/(internal_energy_heat-internal_energy_1))
     # breakpoint()
     
-    plt.plot(u, color = 'red')
+    plt.plot(depth,u, color = 'red')
     
     if np.isnan(u).any():
         breakpoint()
@@ -3469,7 +3481,7 @@ def run_wq_model(
     # print(external_energy/(internal_energy_ice-internal_energy_1))
     # breakpoint()
     
-    plt.plot(u, color = 'blue')
+    plt.plot(depth,u, color = 'blue')
     if np.isnan(u).any():
         breakpoint()
         
@@ -3518,7 +3530,7 @@ def run_wq_model(
     kz = diffusion_res['diffusivity']
     alpha = diffusion_res['alpha']
     
-    plt.plot(u, color = 'purple')
+    plt.plot(depth,u, color = 'purple')
     
     internal_energy_diff =  sum(u * calc_dens(u) * area) *dx * 4186
     # print(external_energy/(internal_energy_diff-internal_energy_1))
@@ -3601,6 +3613,11 @@ def run_wq_model(
     alg_bc[:, idn] = alg
     nutr_bc[:, idn] = nutr
     #nppm[:, idn] = npp
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
     
     # print(alg/volume)
     # print(nutr/volume)
@@ -3697,6 +3714,12 @@ def run_wq_model(
     nppm[:, idn] = npp_production
     algae_growthm[:, idn] = algae_growth
     algae_grazingm[:, idn] = algae_grazing
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
 
     # print(alg/volume)
     # print(nutr/volume)
@@ -3766,6 +3789,12 @@ def run_wq_model(
     
     pocrn = pocr
     
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
+    
     #breakpoint()
     advection_res = advection_diffusion_module(
         un = u,
@@ -3789,6 +3818,8 @@ def run_wq_model(
     pocr = advection_res['pocr']
     pocl = advection_res['pocl']
     
+    
+    
     # if (np.mean(pocr) > (100 * np.mean(pocrn))):
     #     breakpoint()
 
@@ -3797,6 +3828,12 @@ def run_wq_model(
     
     alg_diff[:, idn] = alg
     nutr_diff[:, idn] = nutr
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
 
     # (3) MIXING
     if (idn == 3943):
@@ -3819,7 +3856,7 @@ def run_wq_model(
         breakpoint()
         
     
-    plt.plot(u, color = 'black')
+    plt.plot(depth,u, color = 'black')
     
     
     #plt.show()
@@ -3828,7 +3865,7 @@ def run_wq_model(
     um_conv[:, idn] = u
     
     #breakpoint()
-    #plt.plot(u)
+    #plt.plot(depth,u)
     mixing_res = mixing_module_minlake(
         un = u,
         o2n = o2,
@@ -3848,8 +3885,9 @@ def run_wq_model(
         ice = ice, 
         W_str = W_str)
     
-    plt.plot(u, color = 'green')
-    
+    plt.plot(depth,u, color = 'green')
+    #plt.show()
+    #breakpoint()
     #breakpoint()
     
     u = mixing_res['temp'] 
@@ -3862,6 +3900,11 @@ def run_wq_model(
     pocl = mixing_res['pocl']
     alg = mixing_res['alg']
     nutr = mixing_res['nutr']
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
     
     # u = u
     # thermo_dep = 2
