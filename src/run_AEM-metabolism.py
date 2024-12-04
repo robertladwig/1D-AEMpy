@@ -13,12 +13,12 @@ from numba import jit
 #os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
 #os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEMpy/src")
 os.chdir("C:/Users/au740615/Documents/Projects/1d_aempy/1D-AEMpy/src")
-from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
+from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, run_wq_model_time, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
 
 
 ## lake configurations
 zmax = 25 # maximum lake depth
-nx = 25 * 2 # number of layers we will have
+nx = 25 * 1 # number of layers we will have
 dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
@@ -33,7 +33,7 @@ meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
                      
 ## time step discretization                      
 hydrodynamic_timestep = 24 * dt
-total_runtime =  5*250* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+total_runtime =  1*250* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
 startTime =   (140 + 365*6) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
@@ -65,7 +65,7 @@ Start = datetime.datetime.now()
 
 pgdl_mode = 'off'
     
-res = run_wq_model(  
+res = run_wq_model_time(  
     u = deepcopy(u_ini),
     o2 = deepcopy(wq_ini[0]),
     docr = deepcopy(wq_ini[1]),
@@ -97,7 +97,7 @@ res = run_wq_model(
     scheme ='implicit',
     km = 1.4 * 10**(-7), # 4 * 10**(-6), 
     k0 = 1 * 10**(-2), #1e-2
-    weight_kz = 0.5,
+    weight_kz = 0.5, #0.5,
     kd_light = 0.6, 
     denThresh = 1e-2,
     albedo = 0.1,
@@ -105,7 +105,7 @@ res = run_wq_model(
     emissivity = 0.97,
     sigma = 5.67e-8,
     sw_factor = 1.0,
-    wind_factor = 1.0,
+    wind_factor = 1.2,
     at_factor = 1.0,
     turb_factor = 1.0,
     p2 = 1,
@@ -124,15 +124,15 @@ res = run_wq_model(
     theta_npp = 1.08, #1.08,
     theta_r = 1.08, #1.08,
     conversion_constant = 1e-4,#0.1
-    sed_sink =0.005 / 86400, #0.01
+    sed_sink =0.001 / 86400, #0.01
     k_half = 0.5,#str(ddd0.5, #0.5,
     resp_docr = 0.1/86400, # 0.08 0.001 0.0001
     resp_docl = 0.1/86400, # 0.01 0.05
     resp_pocr = 0.025/86400, # 0.04 0.1 0.001 0.0001
     resp_pocl = 0.025/86400,
     grazing_rate = 0.9/86400, #1e-1/86400, # 3e-3/86400
-    pocr_settling_rate = 1e-3/86400,
-    pocl_settling_rate = 1e-3/86400,
+    pocr_settling_rate = 1e-2/86400,
+    pocl_settling_rate = 1e-2/86400,
     algae_settling_rate = 1e-5/86400,
     sediment_rate = 10/86400,
     piston_velocity = 1.0/86400,

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
-from math import pi, exp, sqrt, log, atan, sin, radians, nan, isinf, ceil
+from math import pi, exp, sqrt, log, atan, sin, radians, nan, isinf, ceil, floor
 from scipy.interpolate import interp1d
 from copy import deepcopy
 import datetime
@@ -22,6 +22,8 @@ from numba import jit
 from scipy.linalg import solve_banded
 from scipy.stats.stats import pearsonr
 from scipy import integrate
+from scipy.sparse import diags
+from scipy.sparse.linalg import spsolve
 
 
 
@@ -96,7 +98,7 @@ def eddy_diffusivity_hendersonSellers(rho, depth, g, rho_0, ice, area, U10, lati
     
 
     buoy = np.ones(len(depth)) * 7e-5
-    buoy[:-1] = np.abs(rho[1:] - rho[:-1]) / (depth[1:] - depth[:-1]) * g / rho_0
+    buoy[:-1] = np.abs(rho[1:] - rho[:-1]) / (depth[1:] - depth[:-1]) * g / rho[:-1] #rho_0
     buoy[-1] = buoy[-2]
         
     low_values_flags = buoy < 7e-5  # Where values are low
@@ -1161,9 +1163,10 @@ def diffusion_module(
         
         bz_old = (1 + alpha)#(area + alpha)
         # y[0, 0] = bz_old[0]
-        y[j-1, j-1] = bz_old[len(bz_old)-1] 
+        
+        #y[j-1, j-1] = bz_old[len(bz_old)-1]  CHANGE
         # y[0, 1] = -alpha[0] 
-        y[j-1, j-2] = -alpha[len(alpha)-2]
+        #y[j-1, j-2] = -alpha[len(alpha)-2] CHANGE
         
         #y[0,0] = bz_old[0]
         #y[0,1] = -alpha[1]
@@ -1188,6 +1191,9 @@ def diffusion_module(
 
     # DERIVED TEMPERATURE OUTPUT FOR NEXT MODULE
         u = np.linalg.solve(y, mn)
+        
+        if max(u) > 40:
+            breakpoint()
         
         #print(sum(u-un))
         #breakpoint()
@@ -1233,6 +1239,232 @@ def diffusion_module(
     dat = {'temp': u,
            'diffusivity': kz,
            'alpha' : max(alpha)}
+    
+    return dat
+
+def diffusion_module_dAdK(
+        un,
+        kzn,
+        Uw,
+        depth,
+        area,
+        dx,
+        dt,
+        nx,
+        g = 9.81,
+        ice = 0,
+        Cd = 0.013,
+        diffusion_method = 'hondzoStefan',
+        scheme = 'implicit'):
+    
+    u = un
+    dens_u_n2 = calc_dens(un)
+    
+
+    kz = kzn# *0.0+ 1e-7 #kzn  #* 10**(-9)
+    
+    # kzn = kz
+    start_time = datetime.datetime.now()
+    if scheme == 'implicit':
+
+      
+        # IMPLEMENTATION OF CRANK-NICHOLSON SCHEME
+
+        j = len(un)
+        y = np.zeros((len(un), len(un)))
+
+        #kzn = kzn * 0+1e-5
+        #breakpoint()
+        
+        area_diff = np.ones(len(depth)) * 0
+        kzn_diff = np.ones(len(depth)) * 0
+        for k in range(1, len(area_diff)-1):
+            area_diff[k] = area[k + 1] - area[k - 1]  
+            kzn_diff[k] = kzn[k + 1] - kzn[k - 1]  
+        
+        kzn_diff[0] =  2 * (kzn[1] - kzn[0]) 
+        kzn_diff[len(depth)-1] =  2 * (kzn[len(depth)-1] - kzn[len(depth)-2]) 
+        
+        area_diff[0] =  2 * (area[1] - area[0]) 
+        area_diff[len(depth)-1] =  2 * (area_diff[len(depth)-1] - area_diff[len(depth)-2]) 
+        
+        
+        
+        # alpha = (area_diff * kzn_diff * dt) / (area * dx**2)
+        alpha = ( dt) / (2 * area * dx**2)
+        
+        if max(alpha) > 1:
+
+            print('Warning: alpha > 1')
+            print("Warning: ",max(alpha)," > 1")
+            
+            
+            
+            if all(alpha > 1):
+                alpha = alpha
+            else:
+                alpha[alpha > 1] = max(alpha[alpha < 1])
+            
+        # alpha = (area * kzn * dt) / (dx**2)
+        # https://math.stackexchange.com/questions/4705090/using-crank-nicolson-to-solve-the-diffusion-equation-with-variable-diffusivity-a
+
+        az = (alpha * kzn_diff * area) / 4 + (alpha * kzn * area_diff) / 4 - alpha * kzn * area   # subdiagonal
+        bz = (1 + 2 * alpha * area * kzn)#(area + alpha) #(area + 2 * alpha) # diagonal
+        cz = (- alpha * kzn_diff * area) / 4 - (alpha * kzn * area_diff) / 4 - alpha * kzn * area # superdiagonal
+        
+        
+        
+        bz[0] = 1
+        bz[len(bz)-1] = 1
+        cz[0] = 0
+        
+        #az =  np.delete(az,0)
+        #cz =  np.delete(cz,len(cz)-1)
+        
+        # tridiagonal matrix
+        for k in range(j-1):
+            y[k][k] = bz[k]
+            y[k][k+1] = cz[k]
+            y[k+1][k] = az[k+1]
+        
+
+        y[j-1, j-2] = 0 #- 2 * alpha[] * kz
+        y[j-1, j-1] = 1
+        
+        #breakpoint()
+        mn = un * 0.0    
+        mn[0] = un[0]
+        mn[-1] = un[-1]
+        
+
+        #breakpoint()
+        # https://mathonweb.com/resources/book4/Heat-Equation.pdf 
+        
+        for k in range(1,j-1):
+            mn[k] = - az[k] * un[k-1] + (1 - 2 * alpha[k] * area[k] * kzn[k]) * un[k] - cz[k] * un[k+1]
+
+        #breakpoint()
+
+    # DERIVED TEMPERATURE OUTPUT FOR NEXT MODULE
+        u = np.linalg.solve(y, mn)
+     
+        
+
+        
+        #print(sum(u-un))
+        #breakpoint()
+
+    if scheme == 'explicit':
+     
+      u[0]= un[0]
+      u[-1] = un[-1]
+      for i in range(1,(nx-1)):
+        u[i] = (un[i] + (kzn[i] * dt / dx**2 * (un[i+1] - 2 * un[i] + un[i-1])))
+
+    
+    end_time = datetime.datetime.now()
+    print("diffusion: " + str(end_time - start_time))
+    
+    dat = {'temp': u,
+           'diffusivity': kz,
+           'alpha' : max(alpha)}
+    
+    return dat
+
+def diffusion_module_dAdK_v2(
+        un,
+        kzn,
+        Uw,
+        depth,
+        area,
+        dx,
+        dt,
+        nx,
+        g = 9.81,
+        ice = 0,
+        Cd = 0.013,
+        diffusion_method = 'hondzoStefan',
+        scheme = 'implicit'):
+    
+    u = un
+    dens_u_n2 = calc_dens(un)
+    
+
+    kz = kzn  #* 10**(-9)
+    
+    alpha = 1e-1
+    
+    # kzn = kz
+    start_time = datetime.datetime.now()
+    if scheme == 'implicit':
+
+      
+        # IMPLEMENTATION OF CRANK-NICHOLSON SCHEME
+
+                # Initialize the diagonals for the tridiagonal matrix
+        lower_diag = np.zeros(nx-1)
+        main_diag = np.zeros(nx)
+        upper_diag = np.zeros(nx-1)
+        b_vector = np.zeros(nx)
+        
+        # Fill the matrix and the right-hand side (RHS) using central differences
+        for i in range(1, nx-1):
+            # Compute D and A at midpoints
+            D_ip1_half = (kzn[i+1] +kzn[i]) / 2
+            D_im1_half = (kzn[i] + kzn[i-1]) / 2
+            A_ip1_half = (area[i+1] +area[i]) / 2
+            A_im1_half = (area[i] + area[i-1]) / 2
+            
+            # Crank-Nicholson coefficients
+            a = dt / (area[i] * 2 * dx**2) * D_im1_half * A_im1_half
+            b = dt / (area[i] * 2 * dx**2) * D_ip1_half * A_ip1_half
+            c = 1 + a + b  # Main diagonal entry
+            #breakpoint()
+            # Fill matrix for the implicit midpoint scheme
+            lower_diag[i-1] = -a  # Lower diagonal (i-1)
+            main_diag[i] = c      # Main diagonal (i)
+            upper_diag[i] = -b    # Upper diagonal (i+1)
+
+            # Right-hand side vector (RHS)
+            b_vector[i] = u[i] + dt / (area[i] * 2 * dx**2) * (
+                          D_ip1_half * A_ip1_half * (u[i+1] - u[i]) -
+                          D_im1_half * A_im1_half * (u[i] - u[i-1]))
+
+        # Boundary conditions (Dirichlet for simplicity)
+        main_diag[0] = 1
+        main_diag[-1] = 1
+        b_vector[0] = un[0]  # Boundary condition at z = 0
+        b_vector[-1] = un[-1]  # Boundary condition at z = L
+
+        # Construct the sparse tridiagonal matrix
+        diagonals = [lower_diag, main_diag, upper_diag]
+        A_matrix = diags(diagonals, offsets=[-1, 0, 1])
+
+        #breakpoint()
+        # Solve the linear system A * T_new = b
+       # breakpoint()
+        u = spsolve(A_matrix, b_vector)
+        
+        if max(u) > 40:
+            breakpoint()
+        
+        #print(sum(u-un))
+        #breakpoint()
+
+    if scheme == 'explicit':
+     
+      u[0]= un[0]
+      u[-1] = un[-1]
+      for i in range(1,(nx-1)):
+        u[i] = (un[i] + (kzn[i] * dt / dx**2 * (un[i+1] - 2 * un[i] + un[i-1])))
+
+    
+    end_time = datetime.datetime.now()
+    print("diffusion: " + str(end_time - start_time))
+    
+    dat = {'temp': u,
+           'diffusivity': kz,
+           'alpha' : (alpha)}
     
     return dat
 
@@ -3234,7 +3466,7 @@ def run_wq_model(
   ea_fillvals = tuple(daily_meteo.ea.values[[0,-1]])
   ea = interp1d(daily_meteo.dt.values, daily_meteo.ea.values, kind = "linear", fill_value=ea_fillvals, bounds_error=False)
   Uw_fillvals = tuple(daily_meteo.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values[[0, -1]])
-  Uw = interp1d(daily_meteo.dt.values, wind_factor * daily_meteo.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values, kind = "linear", fill_value=Uw_fillvals, bounds_error=False)
+  Uw = interp1d(daily_meteo.dt.values, daily_meteo.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values, kind = "linear", fill_value=Uw_fillvals, bounds_error=False)
   CC_fillvals = tuple(daily_meteo.Cloud_Cover.values[[0,-1]])
   CC = interp1d(daily_meteo.dt.values, daily_meteo.Cloud_Cover.values, kind = "linear", fill_value=CC_fillvals, bounds_error=False)
   Pa_fillvals = tuple(daily_meteo.Surface_Level_Barometric_Pressure_pascal.values[[0,-1]])
@@ -3338,17 +3570,32 @@ def run_wq_model(
   #times = np.arange(startTime, endTime, dt)
   times = np.arange(startTime * dt, endTime * dt, dt)
   for idn, n in enumerate(times):
+
+    
+    if 'kz' in locals():
+        1+1
+    else: 
+        kz = u * 0.0
+    
+
+        
+    if (dt > 1/2 * dx**2/max(kz)):
+        n_reduced = n - dt
+        dt_reduced = 3600  /  ceil(7200 * max(kz) / dx**2)
+        
+        
+        
+
+            
+        
+        
     
       
     Tair_n = Tair(n) * at_factor
     Jsw_n = Jsw(n) * sw_factor
     Uw_n = Uw(n) * wind_factor
     
-    # print(n)
-    # print(Tair_n)
-    # print(Jsw_n)
-    # print(Uw_n)
-    # breakpoint()
+
     
     if Uw_n == 0:
         Uw_n = 1e-2
@@ -3367,10 +3614,10 @@ def run_wq_model(
     
     internal_energy_1 = sum(un * calc_dens(un) * area) *dx * 4186
     
-    #breakpoint()
+
     
     depth_limit = mean_depth
-    # depth_limit = 1
+
     
     sum_doc = (docr[depth < depth_limit] + docl[depth < depth_limit])/volume[depth < depth_limit]# +nutr[depth < depth_limit] )/volume[depth < depth_limit] 
     sum_poc = (pocr[depth < depth_limit]  + pocl[depth < depth_limit] )/volume[depth < depth_limit] 
@@ -3391,7 +3638,7 @@ def run_wq_model(
     alg_initial[:, idn] = pocr
     nutr_initial[:, idn] = nutr
     
-    # breakpoint()
+
     ## (1) HEATING
     heating_res = heating_module(
         un = u,
@@ -3490,15 +3737,9 @@ def run_wq_model(
 
     #breakpoint()
     dens_u_n2 = calc_dens(u)
-    if 'kz' in locals():
-        1+1
-    else: 
-        kz = u * 0.0
-    
-    if np.isnan(kz).any():
-        breakpoint()
+
         
-        
+    #breakpoint()
     if diffusion_method == 'hendersonSellers':
         kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
     elif diffusion_method == 'munkAnderson':
@@ -3513,7 +3754,7 @@ def run_wq_model(
         
     #plt.plot(kz)
     ## (2) DIFFUSION
-    diffusion_res = diffusion_module(
+    diffusion_res = diffusion_module_dAdK(
         un = u,
         kzn = kz,
         Uw = Uw_n,
@@ -3944,9 +4185,12 @@ def run_wq_model(
     dt_iceon_avg_prior = dt_iceon_avg
     iceT_prior = iceT
     
-
+    
     um[:, idn] = u
     
+    # if max(u) > 40:
+    #     breakpoint()
+        
     Him[0,idn] = Hi
     Hsm[0,idn] = Hs
     Hsim[0,idn] = Hsi
@@ -4109,3 +4353,963 @@ def k600_to_kgas(k600, temperature, gas = "O2"):
     
     #print("k600:", k600, "kGas:", kgas)
     return(kgas)
+
+def run_wq_model_time(
+  u, 
+  o2,
+  docr,
+  docl,
+  pocr,
+  pocl,
+  alg,
+  nutr,
+  startTime, 
+  endTime,
+  area,
+  volume,
+  depth,
+  zmax,
+  nx,
+  dt,
+  dx,
+  daily_meteo,
+  secview,
+  phosphorus_data,
+  mean_depth,
+  pocl_inflow,
+  pocr_inflow,
+  tp_inflow,
+  alg_inflow,
+  settling_rate = 0.3 / 86400,
+  ice=False,
+  Hi=0,
+  iceT=6,
+  supercooled=0,
+  coupled = 'on',
+  diffusion_method = 'hendersonSellers',
+  scheme='implicit',
+  km = 1.4 * 10**(-7),
+  k0 = 1 * 10**(-2),
+  weight_kz = 0.5, 
+  kd_light=None,
+  denThresh=1e-3,
+  albedo=0.1,
+  eps=0.97,
+  emissivity=0.97,
+  sigma=5.67e-8,
+  sw_factor = 1.0,
+  wind_factor = 1.0,
+  at_factor = 1.0,
+  turb_factor = 1.0,
+  p2=1,
+  B=0.61,
+  g=9.81,
+  Cd=0.0013, # momentum coeff (wind)
+  meltP=1,
+  dt_iceon_avg=0.8,
+  Hgeo=0.1, # geothermal heat
+  KEice=1/1000,
+  Ice_min=0.1,
+  pgdl_mode='on',
+  Hs = 0,
+  rho_snow = 250,
+  Hsi = 0,
+  rho_ice = 910,
+  rho_fw = 1000,
+  rho_new_snow = 250,
+  rho_max_snow = 450,
+  K_ice = 2.1,
+  Cw = 4.18E6,
+  L_ice = 333500,
+  kd_snow = 0.9,
+  kd_ice = 0.7,p_max = 1.0/86400,
+  IP = 0.1,
+  theta_npp = 1.08,
+  theta_r = 1.08,
+  conversion_constant = 0.1,
+  sed_sink = -1.0 / 86400,
+  k_half = 0.5,
+  resp_docr = -0.001,
+  resp_docl = -0.01,
+  resp_pocr = -0.1,
+  resp_pocl = -0.1,
+  grazing_rate = -0.1,
+  pocr_settling_rate = 0.3,
+  pocl_settling_rate = 0.3,
+  algae_settling_rate = 1e-5/86400,
+  sediment_rate = 0.01,
+  piston_velocity = 1.0,
+  light_water = 0.125,
+  light_doc = 0.02,
+  light_poc = 0.7,
+  W_str = None,
+  f_sod = 1e-2,
+  d_thick = 0.001,
+  growth_rate = 1.1,
+  grazing_ratio = 0.1,
+  alpha_gpp = 0.1/3600,
+  beta_gpp = 4.2/3600,
+  o2_to_chla = 41.5/3600,
+  q_in = 1):
+    
+  ## linearization of driver data, so model can have dynamic step
+  Jsw_fillvals = tuple(daily_meteo.Shortwave_Radiation_Downwelling_wattPerMeterSquared.values[[0, -1]])
+  Jsw = interp1d(daily_meteo.dt.values, daily_meteo.Shortwave_Radiation_Downwelling_wattPerMeterSquared.values, kind = "linear", fill_value=Jsw_fillvals, bounds_error=False)
+  Jlw_fillvals = tuple(daily_meteo.Longwave_Radiation_Downwelling_wattPerMeterSquared.values[[0,-1]])
+  Jlw = interp1d(daily_meteo.dt.values, daily_meteo.Longwave_Radiation_Downwelling_wattPerMeterSquared.values, kind = "linear", fill_value=Jlw_fillvals, bounds_error=False)
+  Tair_fillvals = tuple(daily_meteo.Air_Temperature_celsius.values[[0,-1]])
+  Tair = interp1d(daily_meteo.dt.values, daily_meteo.Air_Temperature_celsius.values, kind = "linear", fill_value=Tair_fillvals, bounds_error=False)
+  ea_fillvals = tuple(daily_meteo.ea.values[[0,-1]])
+  ea = interp1d(daily_meteo.dt.values, daily_meteo.ea.values, kind = "linear", fill_value=ea_fillvals, bounds_error=False)
+  Uw_fillvals = tuple(daily_meteo.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values[[0, -1]])
+  Uw = interp1d(daily_meteo.dt.values, daily_meteo.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values, kind = "linear", fill_value=Uw_fillvals, bounds_error=False)
+  CC_fillvals = tuple(daily_meteo.Cloud_Cover.values[[0,-1]])
+  CC = interp1d(daily_meteo.dt.values, daily_meteo.Cloud_Cover.values, kind = "linear", fill_value=CC_fillvals, bounds_error=False)
+  Pa_fillvals = tuple(daily_meteo.Surface_Level_Barometric_Pressure_pascal.values[[0,-1]])
+  Pa = interp1d(daily_meteo.dt.values, daily_meteo.Surface_Level_Barometric_Pressure_pascal.values, kind = "linear", fill_value=Pa_fillvals, bounds_error=False)
+  if kd_light is None:
+      kd_fillvals = tuple(secview.kd.values[[0,-1]])
+      kd = interp1d(secview.dt.values, secview.kd.values, kind = "linear", fill_value=kd_fillvals, bounds_error=False)
+  RH_fillvals = tuple(daily_meteo.Relative_Humidity_percent.values[[0,-1]])
+  RH = interp1d(daily_meteo.dt.values, daily_meteo.Relative_Humidity_percent.values, kind = "linear", fill_value=RH_fillvals, bounds_error=False)
+  PP_fillvals = tuple(daily_meteo.Precipitation_millimeterPerDay.values[[0,-1]])
+  PP = interp1d(daily_meteo.dt.values, daily_meteo.Precipitation_millimeterPerDay.values, kind = "linear", fill_value=PP_fillvals, bounds_error=False)
+  #TP_fillvals = tuple(phosphorus_data.tp.values[[0,-1]])
+  #TP = interp1d(phosphorus_data.dt.values, phosphorus_data.tp.values, kind = "linear", fill_value=TP_fillvals, bounds_error=False)
+  TP = -999
+  
+  #breakpoint()
+  
+  step_times = np.arange(startTime*dt, endTime*dt, dt)
+  nCol = len(step_times)
+  um = np.full([nx, nCol], np.nan)
+  kzm = np.full([nx, nCol], np.nan)
+  mix_z = np.full([1,nCol], np.nan)
+  kd_lightm = np.full([1,nCol], np.nan)
+  Him= np.full([1,nCol], np.nan)
+  Hsm= np.full([1,nCol], np.nan)
+  Hsim= np.full([1,nCol], np.nan)
+  thermo_depm = np.full([1,nCol], np.nan)
+  energy_ratiom = np.full([1,nCol], np.nan)
+  
+
+  um_initial = np.full([nx, nCol], np.nan)
+  um_heat = np.full([nx, nCol], np.nan)
+  um_diff = np.full([nx, nCol], np.nan)
+  um_mix = np.full([nx, nCol], np.nan)
+  um_conv = np.full([nx, nCol], np.nan)
+  um_ice = np.full([nx, nCol], np.nan)
+  n2m = np.full([nx, nCol], np.nan)
+  meteo_pgdl = np.full([28, nCol], np.nan)
+  
+  o2_initial = np.full([nx, nCol], np.nan)
+  o2_bc = np.full([nx, nCol], np.nan)
+  o2_pd = np.full([nx, nCol], np.nan)
+  o2_diff = np.full([nx, nCol], np.nan)
+  o2m = np.full([nx, nCol], np.nan)
+  
+  docl_initial = np.full([nx, nCol], np.nan)
+  docl_bc = np.full([nx, nCol], np.nan)
+  docl_pd = np.full([nx, nCol], np.nan)
+  docl_diff = np.full([nx, nCol], np.nan)
+  doclm = np.full([nx, nCol], np.nan)
+  
+  docr_initial = np.full([nx, nCol], np.nan)
+  docr_bc = np.full([nx, nCol], np.nan)
+  docr_pd = np.full([nx, nCol], np.nan)
+  docr_diff = np.full([nx, nCol], np.nan)
+  docrm = np.full([nx, nCol], np.nan)
+  
+  pocl_initial = np.full([nx, nCol], np.nan)
+  pocl_bc = np.full([nx, nCol], np.nan)
+  pocl_pd = np.full([nx, nCol], np.nan)
+  pocl_diff = np.full([nx, nCol], np.nan)
+  poclm = np.full([nx, nCol], np.nan)
+  
+  pocr_initial = np.full([nx, nCol], np.nan)
+  pocr_bc = np.full([nx, nCol], np.nan)
+  pocr_pd = np.full([nx, nCol], np.nan)
+  pocr_diff = np.full([nx, nCol], np.nan)
+  pocrm = np.full([nx, nCol], np.nan)
+  
+  alg_initial = np.full([nx, nCol], np.nan)
+  alg_bc = np.full([nx, nCol], np.nan)
+  alg_pd = np.full([nx, nCol], np.nan)
+  alg_diff = np.full([nx, nCol], np.nan)
+  algm = np.full([nx, nCol], np.nan)
+  
+  nutr_initial = np.full([nx, nCol], np.nan)
+  nutr_bc = np.full([nx, nCol], np.nan)
+  nutr_pd = np.full([nx, nCol], np.nan)
+  nutr_diff = np.full([nx, nCol], np.nan)
+  nutrm = np.full([nx, nCol], np.nan)
+  
+  nppm = np.full([nx, nCol], np.nan)
+  docr_respirationm = np.full([nx, nCol], np.nan)
+  docl_respirationm = np.full([nx, nCol], np.nan)
+  pocr_respirationm = np.full([nx, nCol], np.nan)
+  pocl_respirationm = np.full([nx, nCol], np.nan)
+  
+  algae_growthm = np.full([nx, nCol], np.nan)
+  algae_grazingm = np.full([nx, nCol], np.nan)
+  
+  differrorm= np.full([1,nCol], np.nan)
+  alpham = np.full([1,nCol], np.nan)
+  
+  if not kd_light is None:
+    def kd(n): # using this shortcut for now / testing if it works
+      return kd_light
+
+  
+
+  #breakpoint()
+  #times = np.arange(startTime, endTime, dt)
+  times = np.arange(startTime * dt, endTime * dt, dt)
+  #for idn, n in enumerate(times):
+  
+  time_model = startTime * dt - dt
+  last_time_step = endTime * dt
+
+  while time_model <= (last_time_step):
+    print(time_model)
+
+      
+    dt = 3600
+    
+    if 'kz' in locals():
+        1+1
+    else: 
+        kz = u * 0.0 +1e-8
+    
+
+        
+    if (dt > 1/2 * dx**2/max(kz)):
+        dt = 3600  /  ceil(7200 * max(kz) / dx**2)
+        # dt = int(1/2 * dx**2/max(kz))
+        print('Potential spurious oscillations, reducing time step!')
+        #breakpoint()
+        
+        
+        
+    n = time_model + dt
+    time_model = time_model + dt      
+    print(time_model)
+
+        
+    
+      
+    Tair_n = Tair(n) * at_factor
+    Jsw_n = Jsw(n) * sw_factor
+    Uw_n = Uw(n) * wind_factor
+    
+
+    
+    if Uw_n == 0:
+        Uw_n = 1e-2
+    
+
+    print(np.argmin(np.abs(times - n)))
+          
+    un = deepcopy(u)
+    un_initial = un
+    
+    
+    if np.isnan(un).any():
+        breakpoint()
+        
+    
+    
+    internal_energy_1 = sum(un * calc_dens(un) * area) *dx * 4186
+    
+
+    
+    depth_limit = mean_depth
+
+    
+    sum_doc = (docr[depth < depth_limit] + docl[depth < depth_limit])/volume[depth < depth_limit]# +nutr[depth < depth_limit] )/volume[depth < depth_limit] 
+    sum_poc = (pocr[depth < depth_limit]  + pocl[depth < depth_limit] )/volume[depth < depth_limit] 
+    
+    if coupled == 'on':
+        kd_light = light_water +  light_doc * np.mean(sum_doc) + light_poc * np.mean(sum_poc)
+    else:
+        kd_light = kd_light
+
+    time_ind = np.where(times == n)
+    
+    um_initial[:, np.argmin(np.abs(times - n))] = u
+    o2_initial[:, np.argmin(np.abs(times - n))] = o2
+    docr_initial[:, np.argmin(np.abs(times - n))] = docr
+    docl_initial[:, np.argmin(np.abs(times - n))] = docl
+    pocr_initial[:, np.argmin(np.abs(times - n))] = pocr
+    pocl_initial[:, np.argmin(np.abs(times - n))] = pocl
+    alg_initial[:, np.argmin(np.abs(times - n))] = pocr
+    nutr_initial[:, np.argmin(np.abs(times - n))] = nutr
+    
+
+    ## (1) HEATING
+    heating_res = heating_module(
+        un = u,
+        area = area,
+        volume = volume,
+        depth = depth, 
+        nx = nx,
+        dt = dt,
+        dx = dx,
+        ice = ice,
+        kd_ice = kd_ice,
+        Tair = Tair_n,
+        CC = CC(n),
+        ea = ea(n),
+        Jsw = Jsw_n,
+        Jlw = Jlw(n),
+        Uw = Uw_n,
+        Pa= Pa(n),
+        RH = RH(n),
+        kd_light = kd_light,
+        Hi = Hi,
+        rho_snow = rho_snow,
+        Hs = Hs,
+        at_factor = at_factor,
+        sw_factor = sw_factor,
+        turb_factor = turb_factor)
+    
+    u = heating_res['temp']
+    IceSnowAttCoeff = heating_res['IceSnowAttCoeff']
+    external_energy = heating_res['external_energy']
+    
+ 
+    internal_energy_heat = sum(u * calc_dens(u) * area) *dx * 4186
+    
+    delta_energy_heat = (external_energy/(internal_energy_heat-internal_energy_1))
+    # if  delta_energy_heat < 0.5:
+    #     breakpoint()
+        
+    # 1/m2 deg C kg/m3 m2 m J/kg/K --> J/m2
+    # print(external_energy/(internal_energy_heat-internal_energy_1))
+    # breakpoint()
+    
+    plt.plot(depth,u, color = 'red')
+    
+    if np.isnan(u).any():
+        breakpoint()
+        
+    
+    um_heat[:, np.argmin(np.abs(times - n))] = u
+    
+    ## (5) ICE AND SNOW
+    ice_res = ice_module(
+        un = u,
+        dt = dt,
+        dx = dx,
+        area = area,
+        Tair = Tair_n,
+        CC = CC(n),
+        ea = ea(n),
+        Jsw = Jsw_n,
+        Jlw = Jlw(n),
+        Uw = Uw_n,
+        Pa= Pa(n),
+        RH = RH(n),
+        PP = PP(n),
+        IceSnowAttCoeff = IceSnowAttCoeff,
+        ice = ice,
+        dt_iceon_avg = dt_iceon_avg,
+        iceT = iceT,
+        supercooled = supercooled,
+        rho_snow = rho_snow,
+        Hi = Hi,
+        Hsi = Hsi,
+        Hs = Hs)
+    
+    u = ice_res['temp']
+    Hi = ice_res['icethickness']
+    Hs = ice_res['snowthickness']
+    Hsi = ice_res['snowicethickness']
+    ice = ice_res['iceFlag']
+    iceT = ice_res['icemovAvg']
+    supercooled = ice_res['supercooled']
+    rho_snow = ice_res['density_snow']
+    
+    
+    internal_energy_ice =  sum(u * calc_dens(u) * area) *dx * 4186
+    # print(external_energy/(internal_energy_ice-internal_energy_1))
+    # breakpoint()
+    
+    plt.plot(depth,u, color = 'blue')
+    if np.isnan(u).any():
+        breakpoint()
+        
+    um_ice[:, np.argmin(np.abs(times - n))] = u
+    
+
+    #breakpoint()
+    dens_u_n2 = calc_dens(u)
+
+        
+    #breakpoint()
+    if diffusion_method == 'hendersonSellers':
+        kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+    elif diffusion_method == 'munkAnderson':
+        kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, Cd, u, kz,  km, weight_kz, k0) / 1
+    elif diffusion_method == 'hondzoStefan':
+        kz = eddy_diffusivity(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, u, kz) / 86400
+    elif diffusion_method == 'pacanowskiPhilander':
+        kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw_n,  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+    
+    if np.isnan(kz).any():
+        breakpoint()
+        
+    #plt.plot(kz)
+    ## (2) DIFFUSION
+    diffusion_res = diffusion_module_dAdK(
+        un = u,
+        kzn = kz,
+        Uw = Uw_n,
+        depth= depth,
+        dx = dx,
+        area = area,
+        dt = dt,
+        nx = nx,
+        ice = ice, 
+        diffusion_method = diffusion_method,
+        scheme = scheme)
+    
+    u = diffusion_res['temp']
+    kz = diffusion_res['diffusivity']
+    alpha = diffusion_res['alpha']
+    
+    plt.plot(depth,u, color = 'purple')
+    
+    internal_energy_diff =  sum(u * calc_dens(u) * area) *dx * 4186
+    # print(external_energy/(internal_energy_diff-internal_energy_1))
+    # breakpoint()
+    if np.isnan(u).any():
+        breakpoint()
+        
+    kzm[:,np.argmin(np.abs(times - n))] = kz
+    um_diff[:, np.argmin(np.abs(times - n))] = u
+    differrorm[0, np.argmin(np.abs(times - n))] = external_energy/(internal_energy_diff-internal_energy_1)
+    alpham[0, np.argmin(np.abs(times - n))] = alpha
+
+    
+    ## (WQ1) BOUNDARY ADDITION
+    boundary_res = boundary_module(
+        un = u,
+        o2n = o2,
+        docrn = docr,
+        docln = docl,
+        pocrn = pocr,
+        pocln = pocl,
+        nutrn = nutr,
+        algn = alg,
+        area = area,
+        volume = volume,
+        depth = depth, 
+        nx = nx,
+        dt = dt,
+        dx = dx,
+        ice = ice,
+        kd_ice = kd_ice,
+        Tair = Tair_n,
+        CC = CC(n),
+        ea = ea(n),
+        Jsw = Jsw_n,
+        Jlw = Jlw(n),
+        Uw = Uw_n,
+        Pa= Pa(n),
+        RH = RH(n),
+        kd_light = kd_light,
+        TP = TP,
+        Hi = Hi,
+        rho_snow = rho_snow,
+        Hs = Hs,
+        at_factor = at_factor,
+        sw_factor = sw_factor,
+        turb_factor = turb_factor,
+        wind_factor = wind_factor,
+        p_max = p_max,
+        IP = IP,
+        theta_npp = theta_npp,
+        theta_r = theta_r,
+        conversion_constant = conversion_constant,
+        sed_sink = sed_sink,
+        k_half = k_half,
+        piston_velocity = piston_velocity,
+        pocl_inflow = pocl_inflow,
+        pocr_inflow = pocr_inflow,
+        tp_inflow = tp_inflow,
+        alg_inflow = alg_inflow,
+        f_sod = f_sod,
+        d_thick = d_thick,
+        q_in = q_in)
+    
+    o2 = boundary_res['o2']
+    docr = boundary_res['docr']
+    docl = boundary_res['docl']
+    pocr = boundary_res['pocr']
+    pocl = boundary_res['pocl']
+    alg = boundary_res['alg']
+    nutr = boundary_res['nutr']
+    npp = boundary_res['npp']
+
+    o2_bc[:, np.argmin(np.abs(times - n))] = o2
+    docr_bc[:, np.argmin(np.abs(times - n))] = docr
+    docl_bc[:, np.argmin(np.abs(times - n))] = docl
+    pocr_bc[:, np.argmin(np.abs(times - n))] = pocr
+    pocl_bc[:, np.argmin(np.abs(times - n))] = pocl
+    
+    alg_bc[:, np.argmin(np.abs(times - n))] = alg
+    nutr_bc[:, np.argmin(np.abs(times - n))] = nutr
+    #nppm[:, np.argmin(np.abs(times - n))] = npp
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
+    # print(alg/volume)
+    # print(nutr/volume)
+    # breakpoint()
+    
+    # print(o2/volume)
+    # print(docl/volume)
+    # print(docr/volume)
+    # print(pocl/volume)
+    # breakpoint()
+    
+    ## (WQ2) PRODUCTION CONSUMPTION
+    prodcons_res = prodcons_module(
+        un = u,
+        o2n = o2,
+        docrn = docr,
+        docln = docl,
+        pocrn = pocr,
+        pocln = pocl,
+        algn = alg,
+        nutrn = nutr,
+        area = area,
+        volume = volume,
+        depth = depth, 
+        nx = nx,
+        dt = dt,
+        dx = dx,
+        theta_r = theta_r,
+        k_half = k_half,
+        resp_docr = resp_docr,
+        resp_docl = resp_docl,
+        resp_pocr = resp_pocr,
+        resp_pocl = resp_pocl,
+        grazing_rate = grazing_rate,
+        ice = ice,
+        kd_ice = kd_ice,
+        Tair = Tair_n,
+        CC = CC(n),
+        ea = ea(n),
+        Jsw = Jsw_n,
+        Jlw = Jlw(n),
+        Uw = Uw_n,
+        Pa= Pa(n),
+        RH = RH(n),
+        kd_light = kd_light,
+        TP = TP, #TP(n)
+        Hi = Hi,
+        rho_snow = rho_snow,
+        Hs = Hs,
+        at_factor = at_factor,
+        sw_factor = sw_factor,
+        turb_factor = turb_factor,
+        wind_factor = wind_factor,
+        p_max = p_max,
+        IP = IP,
+        theta_npp = theta_npp,
+        conversion_constant = conversion_constant,
+        sed_sink = sed_sink,
+        piston_velocity = piston_velocity, 
+        growth_rate = growth_rate, 
+        grazing_ratio = grazing_ratio,
+        alpha_gpp = alpha_gpp,
+        beta_gpp = beta_gpp,
+        o2_to_chla = o2_to_chla)
+    
+    o2 = prodcons_res['o2']
+    docr = prodcons_res['docr']
+    docl = prodcons_res['docl']
+    pocr = prodcons_res['pocr']
+    pocl = prodcons_res['pocl']
+    alg = prodcons_res['alg']
+    nutr = prodcons_res['nutr']
+    docr_respiration = prodcons_res['docr_respiration']
+    docl_respiration = prodcons_res['docl_respiration']
+    pocr_respiration = prodcons_res['pocr_respiration']
+    pocl_respiration = prodcons_res['pocl_respiration']
+    npp_production = prodcons_res['npp_production']
+    algae_growth = prodcons_res['algae_growth']
+    algae_grazing = prodcons_res['algae_grazing']
+
+    o2_pd[:, np.argmin(np.abs(times - n))] = o2
+    docr_pd[:, np.argmin(np.abs(times - n))] = docr
+    docl_pd[:, np.argmin(np.abs(times - n))] = docl
+    pocr_pd[:, np.argmin(np.abs(times - n))] = pocr
+    pocl_pd[:, np.argmin(np.abs(times - n))] = pocl
+    
+    alg_pd[:, np.argmin(np.abs(times - n))] = alg
+    nutr_pd[:, np.argmin(np.abs(times - n))] = nutr
+    
+    docr_respirationm[:, np.argmin(np.abs(times - n))] = docr_respiration
+    docl_respirationm[:, np.argmin(np.abs(times - n))] = docl_respiration
+    pocr_respirationm[:, np.argmin(np.abs(times - n))] = pocr_respiration
+    pocl_respirationm[:, np.argmin(np.abs(times - n))] = pocl_respiration
+    nppm[:, np.argmin(np.abs(times - n))] = npp_production
+    algae_growthm[:, np.argmin(np.abs(times - n))] = algae_growth
+    algae_grazingm[:, np.argmin(np.abs(times - n))] = algae_grazing
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
+
+    # print(alg/volume)
+    # print(nutr/volume)
+    # breakpoint()
+    # print(o2/volume)
+    # print(docl/volume)
+    # print(docr/volume)
+    # print(pocl/volume)
+    # breakpoint()
+    
+    # dens_u_n2 = calc_dens(u)
+    # if 'kz' in locals():
+    #     1+1
+    # else: 
+    #     kz = u * 0.0
+        
+    # if diffusion_method == 'hendersonSellers':
+    #     kz = eddy_diffusivity_hendersonSellers(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+    # elif diffusion_method == 'munkAnderson':
+    #     kz = eddy_diffusivity_munkAnderson(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, Cd, u, kz) / 1
+    # elif diffusion_method == 'hondzoStefan':
+    #     kz = eddy_diffusivity(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, u, kz) / 86400
+    # elif diffusion_method == 'pacanowskiPhilander':
+    #     kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
+    
+    ## (WQ3) TRANSPORT
+    transport_res = transport_module(
+        un = u,
+        o2n = o2,
+        docrn = docr,
+        docln = docl,
+        pocrn = pocr,
+        pocln = pocl,
+        algn = alg,
+        nutrn = nutr,
+        kzn = kz,
+        Uw = Uw_n,
+        depth= depth,
+        dx = dx,
+        area = area,
+        volume = volume,
+        dt = dt,
+        nx = nx,
+        ice = ice, 
+        diffusion_method = diffusion_method,
+        scheme = scheme,
+        pocr_settling_rate = pocr_settling_rate,
+        pocl_settling_rate = pocl_settling_rate,
+        algae_settling_rate = algae_settling_rate,
+        sediment_rate = sediment_rate)
+    
+    o2 = transport_res['o2']
+    docr = transport_res['docr']
+    docl = transport_res['docl']
+    pocr = transport_res['pocr']
+    pocl = transport_res['pocl']
+    alg = transport_res['alg']
+    nutr = transport_res['nutr']
+    
+    o2_diff[:, np.argmin(np.abs(times - n))] = o2
+    docr_diff[:, np.argmin(np.abs(times - n))] = docr
+    docl_diff[:, np.argmin(np.abs(times - n))] = docl
+
+    
+    alg_diff[:, np.argmin(np.abs(times - n))] = alg
+    nutr_diff[:, np.argmin(np.abs(times - n))] = nutr
+    
+    pocrn = pocr
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
+    
+    #breakpoint()
+    advection_res = advection_diffusion_module(
+        un = u,
+        pocrn = pocr,
+        pocln = pocl,
+        kzn = kz,
+        Uw = Uw_n,
+        depth= depth,
+        dx = dx,
+        area = area,
+        volume = volume,
+        dt = dt,
+        nx = nx,
+        diffusion_method = diffusion_method,
+        scheme = scheme,
+        settling_rate = settling_rate
+        )
+    
+
+    
+    pocr = advection_res['pocr']
+    pocl = advection_res['pocl']
+    
+    
+    
+    # if (np.mean(pocr) > (100 * np.mean(pocrn))):
+    #     breakpoint()
+
+    pocr_diff[:, np.argmin(np.abs(times - n))] = pocr
+    pocl_diff[:, np.argmin(np.abs(times - n))] = pocl
+    
+    alg_diff[:, np.argmin(np.abs(times - n))] = alg
+    nutr_diff[:, np.argmin(np.abs(times - n))] = nutr
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
+
+    # (3) MIXING
+
+    
+    ## (4) CONVECTION
+    convection_res = convection_module(
+        un = u,
+        nx = nx,
+        volume = volume)
+    
+    u = convection_res['temp']
+    #u = u 
+    
+    internal_energy_conv = sum(u * calc_dens(u) * area) *dx * 4186
+    # print(external_energy/(internal_energy_conv-internal_energy_1))
+    # breakpoint()
+    if np.isnan(u).any():
+        breakpoint()
+        
+    
+    plt.plot(depth,u, color = 'black')
+    
+    
+    #plt.show()
+    #breakpoint()
+    
+    um_conv[:, np.argmin(np.abs(times - n))] = u
+    
+    #breakpoint()
+    #plt.plot(depth,u)
+    mixing_res = mixing_module_minlake(
+        un = u,
+        o2n = o2,
+        docrn = docr,
+        docln = docl,
+        pocrn = pocr,
+        pocln = pocl,
+        algn = alg,
+        nutrn = nutr,
+        depth = depth,
+        area = area,
+        volume = volume,
+        dx = dx,
+        dt = dt,
+        nx = nx,
+        Uw = Uw_n,
+        ice = ice, 
+        W_str = W_str)
+    
+    plt.plot(depth,u, color = 'green')
+    #plt.show()
+    #breakpoint()
+    #breakpoint()
+    
+    u = mixing_res['temp'] 
+    thermo_dep = mixing_res['thermo_dep']
+    energy_ratio = mixing_res['energy_ratio']
+    o2 = mixing_res['o2']
+    docr = mixing_res['docr']
+    docl = mixing_res['docl']
+    pocr = mixing_res['pocr']
+    pocl = mixing_res['pocl']
+    alg = mixing_res['alg']
+    nutr = mixing_res['nutr']
+    
+    #plt.plot(o2, color = 'blue')
+    if np.isnan(o2).any():
+        breakpoint()
+        
+    
+    # u = u
+    # thermo_dep = 2
+    # energy_ratio = 1
+    # o2 = o2
+    # docr = docr
+    # docl = docl
+    # pocr = pocr
+    # pocl = pocl
+    # alg = alg
+    # nutr = nutr
+    if np.isnan(u).any():
+        breakpoint()
+        
+
+    um_mix[:, np.argmin(np.abs(times - n))] = u
+    thermo_depm[0,np.argmin(np.abs(times - n))] = thermo_dep
+    energy_ratiom[0, np.argmin(np.abs(times - n))] = energy_ratio
+    
+
+    
+    o2m[:, np.argmin(np.abs(times - n))] = o2
+    docrm[:, np.argmin(np.abs(times - n))] = docr
+    doclm[:, np.argmin(np.abs(times - n))] = docl
+    pocrm[:, np.argmin(np.abs(times - n))] = pocr
+    poclm[:, np.argmin(np.abs(times - n))] = pocl
+    
+    algm[:, np.argmin(np.abs(times - n))] = alg
+    nutrm[:, np.argmin(np.abs(times - n))] = nutr
+    
+    icethickness_prior = Hi
+    snowthickness_prior = Hs
+    snowicethickness_prior = Hsi
+    rho_snow_prior = rho_snow
+    IceSnowAttCoeff_prior = IceSnowAttCoeff
+    ice_prior = ice
+    dt_iceon_avg_prior = dt_iceon_avg
+    iceT_prior = iceT
+    
+    
+    um[:, np.argmin(np.abs(times - n))] = u
+    
+    # if max(u) > 40:
+    #     breakpoint()
+        
+    Him[0,np.argmin(np.abs(times - n))] = Hi
+    Hsm[0,np.argmin(np.abs(times - n))] = Hs
+    Hsim[0,np.argmin(np.abs(times - n))] = Hsi
+    
+    kd_lightm[0,np.argmin(np.abs(times - n))] =kd_light
+    
+    internal_energy_2 =  sum(u * calc_dens(u) * area) *dx * 4186
+    delta_energy = (external_energy/(internal_energy_2-internal_energy_1))
+    if  delta_energy < 0.5:
+        print("Warning: energy change is too extreme, ",np.round(delta_energy))
+        # print("Warning: energy change is t",delta_energy," > 1")
+    # int2 = ext + int1
+    # breakpoint()
+
+    
+    meteo_pgdl[0, np.argmin(np.abs(times - n))] = heating_res['air_temp']
+    meteo_pgdl[1, np.argmin(np.abs(times - n))] = heating_res['longwave_flux']
+    meteo_pgdl[2, np.argmin(np.abs(times - n))] = heating_res['latent_flux']
+    meteo_pgdl[3, np.argmin(np.abs(times - n))] = heating_res['sensible_flux']
+    meteo_pgdl[4, np.argmin(np.abs(times - n))] = heating_res['shortwave_flux']
+    meteo_pgdl[5, np.argmin(np.abs(times - n))] = heating_res['light']
+    meteo_pgdl[6, np.argmin(np.abs(times - n))] = mixing_res['TKE']
+    meteo_pgdl[7, np.argmin(np.abs(times - n))] = mixing_res['tau']
+    meteo_pgdl[8, np.argmin(np.abs(times - n))] = np.nanmax(area)
+    meteo_pgdl[9, np.argmin(np.abs(times - n))] = CC(n)
+    meteo_pgdl[10, np.argmin(np.abs(times - n))] = ea(n)
+    meteo_pgdl[11, np.argmin(np.abs(times - n))] = Jlw(n)
+    meteo_pgdl[12, np.argmin(np.abs(times - n))] = Uw_n
+    meteo_pgdl[13, np.argmin(np.abs(times - n))] = Pa(n)
+    meteo_pgdl[14, np.argmin(np.abs(times - n))] = RH(n)
+    meteo_pgdl[15, np.argmin(np.abs(times - n))] = PP(n)
+    meteo_pgdl[16, np.argmin(np.abs(times - n))] = IceSnowAttCoeff
+    meteo_pgdl[17, np.argmin(np.abs(times - n))] = ice
+    meteo_pgdl[18, np.argmin(np.abs(times - n))] = iceT
+    meteo_pgdl[19, np.argmin(np.abs(times - n))] = rho_snow
+    meteo_pgdl[20, np.argmin(np.abs(times - n))] = icethickness_prior 
+    meteo_pgdl[21, np.argmin(np.abs(times - n))] = snowthickness_prior
+    meteo_pgdl[22, np.argmin(np.abs(times - n))] = snowicethickness_prior 
+    meteo_pgdl[23, np.argmin(np.abs(times - n))] = rho_snow_prior 
+    meteo_pgdl[24, np.argmin(np.abs(times - n))] = IceSnowAttCoeff_prior
+    meteo_pgdl[25, np.argmin(np.abs(times - n))] = ice_prior
+    meteo_pgdl[26, np.argmin(np.abs(times - n))] = dt_iceon_avg_prior
+    meteo_pgdl[27, np.argmin(np.abs(times - n))] = iceT_prior
+    
+    dens_u_n2 = calc_dens(u)
+    rho_0 = np.mean(dens_u_n2)
+    buoy = np.ones(len(depth)) * 7e-5
+    buoy[:-1] = np.abs(dens_u_n2[1:] - dens_u_n2[:-1]) / (depth[1:] - depth[:-1]) * g / rho_0
+    buoy[-1] = buoy[-2]
+    # n2 = 9.81/np.mean(dens_u_n2) * (dens_u_n2[1:] - dens_u_n2[:-1])/dx
+    n2m[:,np.argmin(np.abs(times - n))] = buoy # np.concatenate([n2, np.array([np.nan])])
+
+  bf_sim = np.apply_along_axis(center_buoyancy, axis=1, arr = um.T, depths=depth)
+  
+
+  df_z_df_sim = pd.DataFrame({'time': times, 'thermoclineDep': bf_sim})
+
+  df_z_df_sim['epi'] = np.nan
+  df_z_df_sim['hypo'] = np.nan
+  df_z_df_sim['tot'] = np.nan
+  df_z_df_sim['stratFlag'] = np.nan
+  for j in range(df_z_df_sim.shape[0]):
+    if np.isnan(df_z_df_sim.loc[j, 'thermoclineDep']):
+      cur_z = 1
+      cur_ind = 0
+    else:
+      cur_z = df_z_df_sim.loc[j, 'thermoclineDep']
+      cur_ind = np.max(np.where(depth < cur_z))
+      
+    df_z_df_sim.loc[j, 'epi'] = np.sum(um[0:(cur_ind + 1), j] * area[0:(cur_ind+1)]) / np.sum(area[0:(cur_ind+1)])
+    df_z_df_sim.loc[j, 'hypo'] = np.sum(um[ cur_ind:, j] * area[cur_ind:]) / np.sum(area[cur_ind:])
+    df_z_df_sim.loc[j, 'tot'] = np.sum(um[:,j] * area) / np.sum(area)
+    if calc_dens(um[-1,j]) - calc_dens(um[0,j]) >= 0.1 and np.mean(um[:,j]) >= 4:
+      df_z_df_sim.loc[j, 'stratFlag'] = 1
+    else:
+      df_z_df_sim.loc[j, 'stratFlag'] = 0
+      
+  dat = {'temp' : um,
+               'diff' : kzm,
+               'icethickness' : Him,
+               'snowthickness' : Hsm,
+               'snowicethickness' : Hsim,
+               'iceflag' : ice,
+               'icemovAvg' : iceT,
+               'supercooled' : supercooled,
+               'endtime' : endTime, 
+               'average' : df_z_df_sim,
+               'temp_initial' : um_initial,
+               'temp_heat' : um_heat,
+               'temp_diff' : um_diff,
+               'temp_mix' : um_mix,
+               'temp_conv' : um_conv,
+               'temp_ice' : um_ice,
+               'meteo_input' : meteo_pgdl,
+               'buoyancy' : n2m,
+               'density_snow' : rho_snow,
+               'o2': o2m,
+               'docr': docrm,
+               'docl': doclm,
+               'pocr': pocrm,
+               'pocl': poclm,
+               'alg': algm,
+               'nutr': nutrm,
+               'npp':nppm,
+               'algae_growth':algae_growthm,
+               'algae_grazing':algae_grazingm,
+               'docr_respiration': docr_respirationm,
+               'docl_respiration': docl_respirationm,
+               'pocr_respiration': pocr_respirationm,
+               'pocl_respiration': pocl_respirationm,
+               'kd_light': kd_lightm,
+               'thermo_dep': thermo_depm,
+               'energy_ratio': energy_ratiom,
+               'differror': differrorm,
+               'alpha' : alpham}
+  
+  return(dat)

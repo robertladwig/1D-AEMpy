@@ -18,9 +18,10 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 ## lake configurations
 zmax = 5 # maximum lake depth
-nx = zmax* 2 # number of layers we will have
+nx = zmax * 4# number of layers we will have
 dt = 1800# 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
+
 
 ## area and depth values of our lake 
 area, depth, volume = get_hypsography(hypsofile = '../../lakes/ormstrup/bathymetry.csv',
@@ -76,12 +77,12 @@ pgdl_mode = 'off'
 res = run_wq_model(  
     u = deepcopy(u_ini),
     o2 = 10 * volume,
-    docr = 1.0 * volume,
-    docl = 1.0 * volume,
+    docr = 3.0 * volume,
+    docl = 5.0 * volume,
     pocr = 0.5 * volume,
     pocl = 0.5 * volume,
     alg = 10/1000 * volume,
-    nutr = 5/1000* volume,
+    nutr = 2/1000* volume,
     startTime = startTime, 
     endTime = endTime, 
     area = area,
@@ -101,7 +102,7 @@ res = run_wq_model(
     iceT = 6,
     supercooled = 0,
     coupled = 'on',
-    diffusion_method = 'hendersonSellers',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
+    diffusion_method = 'hendersonSellers',# 'hendersonSellers',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
     scheme ='implicit',
     km = 1.4 * 10**(-7), # 4 * 10**(-6), 
     k0 = 1 * 10**(-2), #1e-2
@@ -113,13 +114,13 @@ res = run_wq_model(
     emissivity = 0.97,
     sigma = 5.67e-8,
     sw_factor = 1.0,
-    wind_factor = 1.0,
+    wind_factor = 1.0, #1.0,
     at_factor = 1.0,
     turb_factor = 1.0,
     p2 = 1,
     B = 0.61,
     g = 9.81,
-    Cd = 0.0013, # momentum coeff (wind)
+    Cd = 0.00010, #0.0013, # momentum coeff (wind)
     meltP = 1,
     dt_iceon_avg = 0.8,
     Hgeo = 0.1, # geothermal heat 
@@ -132,12 +133,12 @@ res = run_wq_model(
     theta_npp = 1.08, #1.08,
     theta_r = 1.08, #1.08,
     conversion_constant = 1e-4,#0.1
-    sed_sink =0.005 / 86400, #0.01
+    sed_sink = 0.0001 / 86400, #0.01 0.005
     k_half = 0.5,#str(ddd0.5, #0.5,
     resp_docr = 0.1/86400, # 0.08 0.001 0.0001
     resp_docl = 0.1/86400, # 0.01 0.05
-    resp_pocr = 0.025/86400, # 0.04 0.1 0.001 0.0001
-    resp_pocl = 0.025/86400,
+    resp_pocr = 0.05/86400, # 0.04 0.1 0.001 0.0001
+    resp_pocl = 0.05/86400,
     grazing_rate = 0.9/86400, #1e-1/86400, # 3e-3/86400
     pocr_settling_rate = 1e-3/86400,
     pocl_settling_rate = 1e-3/86400,
@@ -149,12 +150,12 @@ res = run_wq_model(
     light_poc = 0.2,#0.7,
     mean_depth = sum(volume)/max(area),
     W_str = None,
-    tp_inflow = 5/1000 * volume[0], # * 1/1e6,
+    tp_inflow = .1/1000 * volume[0], # * 1/1e6,
     alg_inflow = 0.1 * volume[0] * 5/1e6,
     pocr_inflow = 0.5 * volume[0],
     pocl_inflow = 0.5 * volume[0],
-    f_sod = 0.01 / 86400,
-    d_thick = 0.001,
+    f_sod = 10/86400, #0.01 / 86400,
+    d_thick = 0.01,
     growth_rate = 0.5/86400, # 1.0e-3
     grazing_ratio = 0.1,
     alpha_gpp = 0.03/86400,
@@ -669,7 +670,7 @@ axs[0].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
 axs[0].set_title(depth[zp])
 
 
-zp = 5
+zp = 2
 nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
 axs[1].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
 axs[1].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
@@ -677,14 +678,14 @@ axs[1].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
 axs[1].set_title(depth[zp])
 
 
-zp = 10
+zp = 4
 nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
 axs[2].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
 axs[2].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
 axs[2].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
 axs[2].set_title(depth[zp])
 
-zp = 25
+zp = 6
 nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
 axs[3].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
 axs[3].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
@@ -692,7 +693,7 @@ axs[3].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
 axs[3].set_title(depth[zp])
 
 
-zp = 48
+zp = 9
 nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
 axs[4].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
 axs[4].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
