@@ -14,7 +14,7 @@ from datetime import timedelta
 #os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
 #os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEMpy/src")
 os.chdir("C:/Users/au740615/Documents/Projects/1d_aempy/1D-AEMpy/src")
-from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
+from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, run_wq_model_time, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
 
 
 ## lake configurations
@@ -208,6 +208,15 @@ thermo_dep = res['thermo_dep']
 energy_ratio = res['energy_ratio']
 differror = res['differror']
 alpha = res['alpha']
+
+tempchange_conv = temp_diff * 0.0
+densdiff_conv = temp_diff * 0.0
+
+cols = len(temp_mix[0])
+for i in range(cols):
+    density_val = calc_dens(temp_diff[:,i])
+    densdiff_conv[:-1,i] = density_val[0:-1] - density_val[1:]
+    tempchange_conv[:-1,i] = temp_diff[1:,i]
 
 
 End = datetime.datetime.now()
@@ -681,6 +690,25 @@ if pgdl_mode == 'on':
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
     df.to_csv('../../lakes/fallingcreek/output/py_buoyancy.csv', index=None)
+    
+    # temp next for convection
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(tempchange_conv)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_temp-conv.csv', index=None)
+    
+    # density diff for convection
+    df1 = pd.DataFrame(times)
+    df1.columns = ['time']
+    t1 = np.matrix(densdiff_conv)
+    t1 = t1.getT()
+    df2 = pd.DataFrame(t1)
+    df = pd.concat([df1, df2], axis = 1)
+    df.to_csv('../mcl/output/py_density-conv.csv', index=None)
+    
     
     # meteorology
     df1 = pd.DataFrame(times)

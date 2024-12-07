@@ -18,7 +18,7 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 ## lake configurations
 zmax = 25 # maximum lake depth
-nx = 25 * 1 # number of layers we will have
+nx = 25 * 2 # number of layers we will have
 dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
@@ -33,7 +33,7 @@ meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
                      
 ## time step discretization                      
 hydrodynamic_timestep = 24 * dt
-total_runtime =  1*250* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+total_runtime =  2*365* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
 startTime =   (140 + 365*6) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
@@ -65,7 +65,7 @@ Start = datetime.datetime.now()
 
 pgdl_mode = 'off'
     
-res = run_wq_model_time(  
+res = run_wq_model(  
     u = deepcopy(u_ini),
     o2 = deepcopy(wq_ini[0]),
     docr = deepcopy(wq_ini[1]),
@@ -126,10 +126,10 @@ res = run_wq_model_time(
     conversion_constant = 1e-4,#0.1
     sed_sink =0.001 / 86400, #0.01
     k_half = 0.5,#str(ddd0.5, #0.5,
-    resp_docr = 0.1/86400, # 0.08 0.001 0.0001
+    resp_docr = 0.05/86400, # 0.08 0.001 0.0001
     resp_docl = 0.1/86400, # 0.01 0.05
     resp_pocr = 0.025/86400, # 0.04 0.1 0.001 0.0001
-    resp_pocl = 0.025/86400,
+    resp_pocl = 0.5/86400,
     grazing_rate = 0.9/86400, #1e-1/86400, # 3e-3/86400
     pocr_settling_rate = 1e-2/86400,
     pocl_settling_rate = 1e-2/86400,

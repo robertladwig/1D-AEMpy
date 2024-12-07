@@ -13,13 +13,13 @@ from numba import jit
 #os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
 #os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEMpy/src")
 os.chdir("C:/Users/au740615/Documents/Projects/1d_aempy/1D-AEMpy/src")
-from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
+from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, run_wq_model_time, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
 
 
 ## lake configurations
 zmax = 5 # maximum lake depth
 nx = zmax * 4# number of layers we will have
-dt = 1800# 24 hours times 60 min/hour times 60 seconds/min
+dt = 3600# 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
 
@@ -34,7 +34,7 @@ meteo_all = provide_meteorology(meteofile = '../../lakes/ormstrup/meteodriverdat
                      
 ## time step discretization                      
 hydrodynamic_timestep = 86400 #2*24 * dt
-total_runtime =  1*365* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+total_runtime =  150* hydrodynamic_timestep/dt #1*365* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
 startTime =   dt #(1) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
@@ -74,7 +74,7 @@ Start = datetime.datetime.now()
 
 pgdl_mode = 'off'
     
-res = run_wq_model(  
+res = run_wq_model_time(  
     u = deepcopy(u_ini),
     o2 = 10 * volume,
     docr = 3.0 * volume,
@@ -99,7 +99,7 @@ res = run_wq_model(
     Hi = 0,
     Hs = 0,
     Hsi = 0,
-    iceT = 6,
+    iceT = np.mean(u_ini),
     supercooled = 0,
     coupled = 'on',
     diffusion_method = 'hendersonSellers',# 'hendersonSellers',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
@@ -122,7 +122,7 @@ res = run_wq_model(
     g = 9.81,
     Cd = 0.00010, #0.0013, # momentum coeff (wind)
     meltP = 1,
-    dt_iceon_avg = 0.8,
+    dt_iceon_avg = 0.5,
     Hgeo = 0.1, # geothermal heat 
     KEice = 0,
     Ice_min = 0.1,

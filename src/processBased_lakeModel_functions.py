@@ -108,11 +108,15 @@ def eddy_diffusivity_hendersonSellers(rho, depth, g, rho_0, ice, area, U10, lati
     s_seiche = 0.7 * buoy
     
     #breakpoint()
-    Ri = (-1 + (1 + 40 * (np.array(buoy) * k**2 * np.array(depth)**2) / 
-               (w_star**2 * np.exp(-2 * k_star * np.array(depth))))**(1/2)) / 20
+    #Ri = (-1 + (1 + 40 * (np.array(buoy) * k**2 * np.array(depth)**2) / 
+    #           (w_star**2 * np.exp(-2 * k_star * np.array(depth))))**(1/2)) / 20
+    
+    Ri = (-1 + np.sqrt((1 + 40 * np.array(buoy) * k**2 * np.array(depth)**2) / 
+               (w_star**2 * np.exp(-2 * k_star * np.array(depth))))) / 20
+
     
     kz = (k * w_star * np.array(depth)) / (Pr * (1 + 37 * np.array(Ri)**2)) * np.exp(-k_star * np.array(depth))
-    
+
     tau_w = rho_a * Cd * U2**2
     u_star = sqrt(tau_w / rho_0)
     H_ekman = 0.4 * u_star / f
@@ -1267,7 +1271,7 @@ def diffusion_module_dAdK(
     start_time = datetime.datetime.now()
     if scheme == 'implicit':
 
-      
+        
         # IMPLEMENTATION OF CRANK-NICHOLSON SCHEME
 
         j = len(un)
@@ -1348,7 +1352,8 @@ def diffusion_module_dAdK(
     # DERIVED TEMPERATURE OUTPUT FOR NEXT MODULE
         u = np.linalg.solve(y, mn)
      
-        
+        if (min(u) < -10):
+            breakpoint()
 
         
         #print(sum(u-un))
@@ -1448,6 +1453,89 @@ def diffusion_module_dAdK_v2(
         if max(u) > 40:
             breakpoint()
         
+        #print(sum(u-un))
+        #breakpoint()
+
+    if scheme == 'explicit':
+     
+      u[0]= un[0]
+      u[-1] = un[-1]
+      for i in range(1,(nx-1)):
+        u[i] = (un[i] + (kzn[i] * dt / dx**2 * (un[i+1] - 2 * un[i] + un[i-1])))
+
+    
+    end_time = datetime.datetime.now()
+    print("diffusion: " + str(end_time - start_time))
+    
+    dat = {'temp': u,
+           'diffusivity': kz,
+           'alpha' : (alpha)}
+    
+    return dat
+
+def diffusion_module_dAdK_v3(
+        un,
+        kzn,
+        Uw,
+        depth,
+        area,
+        dx,
+        dt,
+        nx,
+        g = 9.81,
+        ice = 0,
+        Cd = 0.013,
+        diffusion_method = 'hondzoStefan',
+        scheme = 'implicit'):
+    
+    u = un
+    dens_u_n2 = calc_dens(un)
+    
+
+    kz = kzn  #* 10**(-9)
+    
+    alpha = 1e-1
+    
+    # kzn = kz
+    start_time = datetime.datetime.now()
+    if scheme == 'implicit':
+        #breakpoint()
+        T_array = un  # Temperature field over time and space
+        K_array = kzn # Thermal conductivity (initial assumption)
+        A_array = area  # Cross-sectional area (initial assumption)
+        
+        # Function to approximate spatial derivatives
+        def compute_derivatives(T, K, A, i):
+            # Central difference for first derivative of T with respect to z
+            dTdz = (T[i+1] - T[i-1]) / (2*dx)
+            
+            # Central difference for second derivative of T with respect to z
+            d2Tdz2 = (T[i+1] - 2*T[i] + T[i-1]) / (dx**2)
+            
+            # Central difference for first derivative of K and A
+            dKdz = (K[i+1] - K[i-1]) / (2*dx)
+            dAdz = (A[i+1] - A[i-1]) / (2*dx)
+            
+            return dTdz, d2Tdz2, dKdz, dAdz
+        
+        # Time-stepping loop using implicit method
+
+            # Right-hand side values for implicit scheme
+        rhs = np.zeros(nx)
+    
+        for i in range(1, nx-1):
+            # Compute spatial derivatives
+            dTdz, d2Tdz2, dKdz, dAdz = compute_derivatives(T_array, K_array, A_array, i)
+            
+            # Compute the right-hand side of the equation
+            rhs[i] = (T_array[i] + dt * (
+                (1 / A_array[i]) * (dKdz * A_array[i] * dTdz + K_array[i] * dAdz * dTdz + K_array[i] * A_array[i] * d2Tdz2)
+            ))
+    
+        # Solve for T at the next time step (implicit)
+        u[1:nx-1] = rhs[1:nx-1]  # Update T for interior points
+
+
         #print(sum(u-un))
         #breakpoint()
 
@@ -1763,6 +1851,10 @@ def mixing_module_minlake(
     else:
         W_str = W_str
     tau = 1.225 * Cd * Uw ** 2 # wind shear is air density times wind velocity 
+    
+    if (tau**3/ calc_dens(u[0])) <= 0:
+        print('Like, what?')
+        breakpoint()
     
     KE = W_str * max(area) * sqrt(tau**3/ calc_dens(u[0]) ) * dt 
     
@@ -3734,7 +3826,8 @@ def run_wq_model(
         
     um_ice[:, idn] = u
     
-
+    if np.abs(np.mean(um_heat[:, idn]) / np.mean(um_ice[:, idn])) > 2:
+        breakpoint()
     #breakpoint()
     dens_u_n2 = calc_dens(u)
 
@@ -3751,7 +3844,9 @@ def run_wq_model(
     
     if np.isnan(kz).any():
         breakpoint()
-        
+    
+
+    
     #plt.plot(kz)
     ## (2) DIFFUSION
     diffusion_res = diffusion_module_dAdK(
@@ -3784,6 +3879,11 @@ def run_wq_model(
     differrorm[0, idn] = external_energy/(internal_energy_diff-internal_energy_1)
     alpham[0, idn] = alpha
 
+    if np.abs(np.mean(um_ice[:, idn]) / np.mean(um_diff[:, idn])) > 2:
+        breakpoint()
+    
+    print(np.abs(np.mean(um_ice[:, idn]) / np.mean(um_diff[:, idn])))
+    #breakpoint()
     
     ## (WQ1) BOUNDARY ADDITION
     boundary_res = boundary_module(
@@ -3856,7 +3956,7 @@ def run_wq_model(
     #nppm[:, idn] = npp
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
+    if np.isnan(o2).any() and coupled == 'on':
         breakpoint()
         
     
@@ -3957,7 +4057,7 @@ def run_wq_model(
     algae_grazingm[:, idn] = algae_grazing
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
+    if np.isnan(o2).any() and coupled == 'on':
         breakpoint()
         
     
@@ -4031,7 +4131,7 @@ def run_wq_model(
     pocrn = pocr
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
+    if np.isnan(o2).any() and coupled == 'on':
         breakpoint()
         
     
@@ -4071,15 +4171,12 @@ def run_wq_model(
     nutr_diff[:, idn] = nutr
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
+    if np.isnan(o2).any() and coupled=='on':
         breakpoint()
         
     
 
     # (3) MIXING
-    if (idn == 3943):
-        print('')
-        #breakpoint()
     
     ## (4) CONVECTION
     convection_res = convection_module(
@@ -4088,6 +4185,7 @@ def run_wq_model(
         volume = volume)
     
     u = convection_res['temp']
+    
     #u = u 
     
     internal_energy_conv = sum(u * calc_dens(u) * area) *dx * 4186
@@ -4104,6 +4202,9 @@ def run_wq_model(
     #breakpoint()
     
     um_conv[:, idn] = u
+    
+    if np.abs(np.mean(um_diff[:, idn]) / np.mean(um_conv[:, idn])) > 2:
+        breakpoint()
     
     #breakpoint()
     #plt.plot(depth,u)
@@ -4143,7 +4244,7 @@ def run_wq_model(
     nutr = mixing_res['nutr']
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
+    if np.isnan(o2).any() and coupled =='on':
         breakpoint()
         
     
@@ -4165,7 +4266,8 @@ def run_wq_model(
     thermo_depm[0,idn] = thermo_dep
     energy_ratiom[0, idn] = energy_ratio
     
-
+    if np.abs(np.mean(um_conv[:, idn]) / np.mean(um_mix[:, idn])) > 2:
+        breakpoint()
     
     o2m[:, idn] = o2
     docrm[:, idn] = docr
@@ -4200,7 +4302,7 @@ def run_wq_model(
     internal_energy_2 =  sum(u * calc_dens(u) * area) *dx * 4186
     delta_energy = (external_energy/(internal_energy_2-internal_energy_1))
     if  delta_energy < 0.5:
-        print("Warning: energy change is too extreme, ",np.round(delta_energy))
+        print("Warning: energy change is too extreme, ",(delta_energy))
         # print("Warning: energy change is t",delta_energy," > 1")
     # int2 = ext + int1
     # breakpoint()
@@ -4594,7 +4696,6 @@ def run_wq_model_time(
     n = time_model + dt
     time_model = time_model + dt      
     print(time_model)
-
         
     
       
@@ -4673,10 +4774,13 @@ def run_wq_model_time(
         sw_factor = sw_factor,
         turb_factor = turb_factor)
     
+    
+    
     u = heating_res['temp']
     IceSnowAttCoeff = heating_res['IceSnowAttCoeff']
     external_energy = heating_res['external_energy']
     
+
  
     internal_energy_heat = sum(u * calc_dens(u) * area) *dx * 4186
     
@@ -4863,8 +4967,8 @@ def run_wq_model_time(
     #nppm[:, np.argmin(np.abs(times - n))] = npp
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
-        breakpoint()
+    # if np.isnan(o2).any():
+    #     breakpoint()
         
     
     # print(alg/volume)
@@ -4965,7 +5069,8 @@ def run_wq_model_time(
     
     #plt.plot(o2, color = 'blue')
     if np.isnan(o2).any():
-        breakpoint()
+        print('ignore for now')
+        #breakpoint()
         
     
 
@@ -5038,8 +5143,8 @@ def run_wq_model_time(
     pocrn = pocr
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
-        breakpoint()
+    # if np.isnan(o2).any():
+    #     breakpoint()
         
     
     
@@ -5078,8 +5183,8 @@ def run_wq_model_time(
     nutr_diff[:, np.argmin(np.abs(times - n))] = nutr
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
-        breakpoint()
+    # if np.isnan(o2).any():
+    #     breakpoint()
         
     
 
@@ -5148,8 +5253,8 @@ def run_wq_model_time(
     nutr = mixing_res['nutr']
     
     #plt.plot(o2, color = 'blue')
-    if np.isnan(o2).any():
-        breakpoint()
+    # if np.isnan(o2).any():
+    #     breakpoint()
         
     
     # u = u
