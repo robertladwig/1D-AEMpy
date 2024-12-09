@@ -698,7 +698,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp-conv.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_temp-conv.csv', index=None)
     
     # density diff for convection
     df1 = pd.DataFrame(times)
@@ -707,7 +707,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_density-conv.csv', index=None)
+    df.to_csv('../../lakes/fallingcreek/output/py_density-conv.csv', index=None)
     
     
     # meteorology
