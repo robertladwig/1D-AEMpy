@@ -104,7 +104,7 @@ def eddy_diffusivity_hendersonSellers(rho, depth, g, rho_0, ice, area, U10, lati
     s_seiche = 0.7 * buoy
     
     #breakpoint()
-    Ri = (-1 + (1 + 40 * (np.array(buoy) * k**2 * np.array(depth)**2) / 
+    Ri = (-1 + ((1 + 40 * (np.array(buoy) * k**2 * np.array(depth)**2)) / 
                (w_star**2 * np.exp(-2 * k_star * np.array(depth))))**(1/2)) / 20
     
     kz = (k * w_star * np.array(depth)) / (Pr * (1 + 37 * np.array(Ri)**2)) * np.exp(-k_star * np.array(depth))
@@ -264,7 +264,7 @@ def eddy_diffusivity_pacanowskiPhilander(rho, depth, g, rho_0, ice, area, U10, l
     s_seiche = 0.7 * buoy
     
     #breakpoint()
-    Ri = (-1 + (1 + 40 * (np.array(buoy) * k**2 * np.array(depth)**2) / 
+    Ri = (-1 + ((1 + 40 * (np.array(buoy) * k**2 * np.array(depth)**2)) / 
                (w_star**2 * np.exp(-2 * k_star * np.array(depth))))**(1/2)) / 20
     
     kz = K0 / (1 + 5 * Ri) + Kb
