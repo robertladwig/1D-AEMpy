@@ -1352,8 +1352,7 @@ def diffusion_module_dAdK(
     # DERIVED TEMPERATURE OUTPUT FOR NEXT MODULE
         u = np.linalg.solve(y, mn)
      
-        if (min(u) < -10):
-            breakpoint()
+       
 
         
         #print(sum(u-un))
@@ -5416,5 +5415,458 @@ def run_wq_model_time(
                'energy_ratio': energy_ratiom,
                'differror': differrorm,
                'alpha' : alpham}
+  
+  return(dat)
+
+def run_kE_model(
+  u, 
+  k,
+  e,
+  w,
+  v,
+  startTime, 
+  endTime,
+  area,
+  volume,
+  depth,
+  zmax,
+  nx,
+  dt,
+  dx,
+  daily_meteo,
+  mean_depth,
+  ice=False,
+  Hi=0,
+  iceT=6,
+  supercooled=0,
+  coupled = 'on',
+  diffusion_method = 'hendersonSellers',
+  scheme='implicit',
+  km = 1.4 * 10**(-7),
+  k0 = 1 * 10**(-2),
+  weight_kz = 0.5, 
+  kd_light=None,
+  denThresh=1e-3,
+  albedo=0.1,
+  eps=0.97,
+  emissivity=0.97,
+  sigma=5.67e-8,
+  sw_factor = 1.0,
+  wind_factor = 1.0,
+  at_factor = 1.0,
+  turb_factor = 1.0,
+  p2=1,
+  B=0.61,
+  g=9.81,
+  Cd=0.0013, # momentum coeff (wind)
+  meltP=1,
+  dt_iceon_avg=0.8,
+  Hgeo=0.1, # geothermal heat
+  KEice=1/1000,
+  Ice_min=0.1,
+  pgdl_mode='on',
+  Hs = 0,
+  rho_snow = 250,
+  Hsi = 0,
+  rho_ice = 910,
+  rho_fw = 1000,
+  rho_new_snow = 250,
+  rho_max_snow = 450,
+  K_ice = 2.1,
+  Cw = 4.18E6,
+  L_ice = 333500,
+  kd_snow = 0.9,
+  kd_ice = 0.7,
+  p_max = 1.0/86400,
+  c_mu_d = 0.072,
+  c_mu = 0.09,
+  sigma_k = 1.00,
+  sigma_e = 1.3,
+  c_e1 = 1.44,
+  c_e2 = 1.92,
+  c_e3 = -0.4,
+  karman = 0.41,
+  c_sigma_0 = 0.5562,
+  z_01 = 0.5,
+  z_02 = 0.05
+  ):
+    
+  ## linearization of driver data, so model can have dynamic step
+  Jsw_fillvals = tuple(daily_meteo.Shortwave_Radiation_Downwelling_wattPerMeterSquared.values[[0, -1]])
+  Jsw = interp1d(daily_meteo.dt.values, daily_meteo.Shortwave_Radiation_Downwelling_wattPerMeterSquared.values, kind = "linear", fill_value=Jsw_fillvals, bounds_error=False)
+  Jlw_fillvals = tuple(daily_meteo.Longwave_Radiation_Downwelling_wattPerMeterSquared.values[[0,-1]])
+  Jlw = interp1d(daily_meteo.dt.values, daily_meteo.Longwave_Radiation_Downwelling_wattPerMeterSquared.values, kind = "linear", fill_value=Jlw_fillvals, bounds_error=False)
+  Tair_fillvals = tuple(daily_meteo.Air_Temperature_celsius.values[[0,-1]])
+  Tair = interp1d(daily_meteo.dt.values, daily_meteo.Air_Temperature_celsius.values, kind = "linear", fill_value=Tair_fillvals, bounds_error=False)
+  ea_fillvals = tuple(daily_meteo.ea.values[[0,-1]])
+  ea = interp1d(daily_meteo.dt.values, daily_meteo.ea.values, kind = "linear", fill_value=ea_fillvals, bounds_error=False)
+  Uw_fillvals = tuple(daily_meteo.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values[[0, -1]])
+  Uw = interp1d(daily_meteo.dt.values, daily_meteo.Ten_Meter_Elevation_Wind_Speed_meterPerSecond.values, kind = "linear", fill_value=Uw_fillvals, bounds_error=False)
+  CC_fillvals = tuple(daily_meteo.Cloud_Cover.values[[0,-1]])
+  CC = interp1d(daily_meteo.dt.values, daily_meteo.Cloud_Cover.values, kind = "linear", fill_value=CC_fillvals, bounds_error=False)
+  Pa_fillvals = tuple(daily_meteo.Surface_Level_Barometric_Pressure_pascal.values[[0,-1]])
+  Pa = interp1d(daily_meteo.dt.values, daily_meteo.Surface_Level_Barometric_Pressure_pascal.values, kind = "linear", fill_value=Pa_fillvals, bounds_error=False)
+  RH_fillvals = tuple(daily_meteo.Relative_Humidity_percent.values[[0,-1]])
+  RH = interp1d(daily_meteo.dt.values, daily_meteo.Relative_Humidity_percent.values, kind = "linear", fill_value=RH_fillvals, bounds_error=False)
+  PP_fillvals = tuple(daily_meteo.Precipitation_millimeterPerDay.values[[0,-1]])
+  PP = interp1d(daily_meteo.dt.values, daily_meteo.Precipitation_millimeterPerDay.values, kind = "linear", fill_value=PP_fillvals, bounds_error=False)
+  #TP_fillvals = tuple(phosphorus_data.tp.values[[0,-1]])
+  #TP = interp1d(phosphorus_data.dt.values, phosphorus_data.tp.values, kind = "linear", fill_value=TP_fillvals, bounds_error=False)
+
+  
+  #breakpoint()
+  
+  step_times = np.arange(startTime, endTime, dt) # *dt
+  nCol = len(step_times)
+  um = np.full([nx, nCol], np.nan)
+  kzm = np.full([nx, nCol], np.nan)
+  kzzm = np.full([nx, nCol], np.nan)
+  kkm = np.full([nx, nCol], np.nan)
+  kem = np.full([nx, nCol], np.nan)
+  mix_z = np.full([1,nCol], np.nan)
+  kd_lightm = np.full([1,nCol], np.nan)
+  Him= np.full([1,nCol], np.nan)
+  Hsm= np.full([1,nCol], np.nan)
+  Hsim= np.full([1,nCol], np.nan)
+  thermo_depm = np.full([1,nCol], np.nan)
+  energy_ratiom = np.full([1,nCol], np.nan)
+  Qm= np.full([1,nCol], np.nan)
+  
+
+  um_initial = np.full([nx, nCol], np.nan)
+  um_final = np.full([nx, nCol], np.nan)
+  vm_initial = np.full([nx, nCol], np.nan)
+  vm_final = np.full([nx, nCol], np.nan)
+  wm_initial = np.full([nx, nCol], np.nan)
+  wm_final = np.full([nx, nCol], np.nan)
+  km_initial = np.full([nx, nCol], np.nan)
+  km_final = np.full([nx, nCol], np.nan)
+  em_initial = np.full([nx, nCol], np.nan)
+  em_final = np.full([nx, nCol], np.nan)
+  n2m = np.full([nx, nCol], np.nan)
+  meteo_pgdl = np.full([28, nCol], np.nan)
+  
+
+  
+  differrorm= np.full([1,nCol], np.nan)
+  alpham = np.full([1,nCol], np.nan)
+  
+  if not kd_light is None:
+    def kd(n): # using this shortcut for now / testing if it works
+      return kd_light
+
+  
+
+  #breakpoint()
+  #times = np.arange(startTime, endTime, dt)
+  times = np.arange(startTime, endTime, dt)
+  for idn, n in enumerate(times):
+
+    if 'kz' in locals():
+        1+1
+    else: 
+        kz = u * 0.0
+        kzz = kz * 0.0
+
+    
+    print(idn)
+          
+    un = deepcopy(u)
+    kn = deepcopy(k)
+    en = deepcopy(e)
+    vn = deepcopy(v)
+    wn = deepcopy(w)
+    
+    un_initial = un
+    
+    if np.isnan(un).any():
+        breakpoint()
+        
+    
+    
+    internal_energy_1 = sum(un * calc_dens(un) * area) *dx * 4186
+    depth_limit = mean_depth
+
+    kd_light = kd_light
+
+    time_ind = np.where(times == n)
+    
+    um_initial[:, idn] = u
+    vm_initial[:, idn] = v
+    wm_initial[:, idn] = w
+    km_initial[:, idn] = k
+    em_initial[:, idn] = e
+    
+    # (1) CLOSURE scheme
+    kz = c_mu_d * kn**2 / en
+    kzz = c_mu * kn**2 / en
+    kk = c_mu / sigma_k  * kn**2 / en
+    ke = c_mu / sigma_e * kn**2 / en
+
+    # (2) HEAT FLUXES; atmospheric and geothermal
+    albedo = 0.1
+    IceSnowAttCoeff = 1
+
+    
+    # surface net heat flux
+    Q = (longwave(cc = CC(n), sigma = sigma, Tair = Tair(n), ea = ea(n), emissivity = emissivity, Jlw = Jlw(n)) + 
+         backscattering(emissivity = emissivity, sigma = sigma, Twater = un[0], eps = eps) +
+         latent(Tair = Tair(n), Twater = un[0], Uw = Uw(n), p2 = p2, pa = Pa(n), ea=ea(n), RH = RH(n), A = area, Cd = Cd) + 
+         sensible(Tair = Tair(n), Twater = un[0], Uw = Uw(n), p2 = p2, pa = Pa(n), ea=ea(n), RH = RH(n), A = area, Cd = Cd))  
+    
+    Qm[0,idn] = Q
+    # short-wave heat flux over water column
+    H =  (1- albedo) * (Jsw(n) )  * np.exp(-(kd_light ) * depth)
+    # geothermal heatflux
+    Hg = (area[:-1]-area[1:])/dx * Hgeo/(4181 * calc_dens(un[0]))
+    Hg = np.append(Hg, Hg.min())
+    
+    # heat source/sink term
+    dHdz = np.abs(np.gradient(H, depth))
+    dAdz = np.abs(np.gradient(area, depth))
+    dvdz = (np.gradient(vn, depth))
+    dwdz = (np.gradient(wn, depth))
+    drhodz = (np.gradient(calc_dens(un), depth))
+    
+
+    #if (Q> 0):
+    #    breakpoint()
+    
+    
+    dT = un * 0.0
+    dT[0] = (1/area[0] * dAdz[0] * Q / (4184 * rho_fw) + 
+             (dHdz[0] )/(4184 * rho_fw ) + 
+          (dAdz[0] * Hgeo)/(4184 * rho_fw* area[0])) * dt
+      # all layers in between
+    for i in range(1,(nx-1)):
+          dT[i] = (( dHdz[i])/(4184 * rho_fw  ) + 
+              (dAdz[i] * Hgeo)/(4184 * rho_fw * area[i]))* dt
+      # bottom layer
+    dT[(nx-1)] = (( dHdz[nx-1] )/(4184 * rho_fw  ) + 
+          (dAdz[nx-1] * Hgeo)/(4184 * rho_fw * area[nx-1]))* dt
+    
+    print(f"dT: {dT}")
+    # (3) MOMENTUM FLUXES
+    coriolis_parameter = 2 * 7.2921 * 10E-5 * sin(0.7543)
+    dV = un * 0.0
+    dW = un * 0.0
+    
+    tau = 1.225 * Cd * Uw(n) ** 2 # wind shear is air density times wind velocity 
+    
+    #tau = np.clip(tau, -0.01, 0.01)
+    
+    dV[0] = ( 1/area[0] * dAdz[0] * tau/rho_fw) * dt #+ 
+    #      wn[0] * (coriolis_parameter)) * dt
+      # all layers in between
+    #for i in range(1,(nx)):
+    #      dV[i] = (wn[i] * (coriolis_parameter) )* dt
+
+    
+    dW[0] = ( 1/area[0] * dAdz[0] * tau/rho_fw) * dt# - 
+         # vn[0] * (coriolis_parameter) ) * dt
+      # all layers in between
+    #for i in range(1,(nx)):
+    #      dW[i] = (- vn[i] * (coriolis_parameter) )* dt
+    
+    # Define implicit coefficients
+    alpha = dt * coriolis_parameter / 2.0
+    
+    # Solve coupled system for u and v implicitly
+    w_new = (wn + dW - alpha * vn) / (1 + alpha**2)
+    v_new = (vn + dV + alpha * w_new) / (1 + alpha**2)
+
+    
+    print(f"W: {v_new}")
+    print(f"W: {w_new}")
+    
+    
+    
+    # (4) TURBULENT FLUXES
+    dP = un * 0.0
+
+    
+    for i in range(0,(nx)):
+          dP[i] = (kzz[i] * (dvdz[i]**2 + dwdz[i]**2))* dt
+    print(f"dP: {dP}")
+    
+    dB = un * 0.0
+    
+    for i in range(0,(nx)):
+          dB[i] = (- kz[i] * (-1) * g / rho_fw * (drhodz[i]) )* dt
+      # bottom layer
+    print(f"dB: {dB}")
+    
+    c_e3_vect = u * 0.0 + 1.0
+    for i in range(0, (len(dB))):
+        if dB[i] < 0:
+            c_e3_vect[i] = -0.4
+    
+    dk = u * 0.0
+    dk[0] = dP[0] + dB[0] - en[0]*dt
+      # all layers in between
+    for i in range(1,(nx-1)):
+          dk[i] = dP[i] + dB[i] - en[i]*dt
+      # bottom layer
+    dk[(nx-1)] = dP[nx-1] + dB[nx-1] - en[nx-1] * dt
+    print(f"dk: {dk}")
+    
+    dE = un * 0.0
+    
+    dAkekzzkdz = (np.gradient(area*ke*kzz*kn**(3/2), depth))
+    # nx+1 nxx-1
+    dE[0] = en[0]/kn[0] * (c_e1 * dP[0] + c_e3_vect[0] * dB[0] - c_e2 * en[0]* dt) + (1 / area[0] * dAkekzzkdz[0] * c_sigma_0 / (sigma_e * (depth[0]+ z_01)**2))*dt
+      # all layers in between
+    for i in range(1,(nx-1)):
+          dE[i] = en[i]/kn[i] * (c_e1 * dP[i] + c_e3_vect[i] * dB[i] - c_e2 * en[i]* dt) 
+      # bottom layer
+    dE[(nx-1)] = en[nx-1]/kn[nx-1] * (c_e1 * dP[nx-1] + c_e3_vect[nx-1] * dB[nx-1] - c_e2 * en[nx-1]* dt)  + (1 / area[nx-1] * dAkekzzkdz[nx-1] * c_sigma_0 / (sigma_e * (depth[nx-1]+ z_02)**2))*dt
+    print(f"dE: {dE}")
+    
+    
+    print(f"temperature: {(un + dT) < un}")
+    print(f"w momentum: {(vn + dV) < vn}")
+    print(f"v momentum: {(wn + dW) < wn}")
+    print(f"TKE production: {(kn + dk) < kn}")
+    print(f"TKE dissipation: {(en + dE) < en}")
+    breakpoint()
+    
+    diffusion_temp = diffusion_module_dAdK(
+        un = un + dT,
+        kzn = kz,
+        Uw = Uw(n),
+        depth= depth,
+        dx = dx,
+        area = area,
+        dt = dt,
+        nx = nx,
+        ice = ice, 
+        diffusion_method = diffusion_method,
+        scheme = scheme)
+    
+    u = diffusion_temp['temp']
+    kz = diffusion_temp['diffusivity']
+    print(f"temp.: {u}")
+    
+    v_new[v_new < 1e-08] = 1E-08
+    w_new[w_new < 1e-08] = 1E-08
+    
+    diffusion_v = diffusion_module_dAdK(
+        un = v_new,
+        kzn = kzz,
+        Uw = Uw(n),
+        depth= depth,
+        dx = dx,
+        area = area,
+        dt = dt,
+        nx = nx,
+        ice = ice, 
+        diffusion_method = diffusion_method,
+        scheme = scheme)
+    
+    v = diffusion_v['temp']
+    kzz = diffusion_v['diffusivity']
+    print(f"u velocity: {v}")
+    
+    diffusion_w = diffusion_module_dAdK(
+        un = w_new,
+        kzn = kzz,
+        Uw = Uw(n),
+        depth= depth,
+        dx = dx,
+        area = area,
+        dt = dt,
+        nx = nx,
+        ice = ice, 
+        diffusion_method = diffusion_method,
+        scheme = scheme)
+    
+    w = diffusion_w['temp']
+    print(f"v velocity: {w}")
+    
+    kn_min = kn + dk
+    kn_min[kn_min < 1e-08] = 1E-08
+    
+    en_min = en + dE
+    en_min[en_min < 1e-08] = 1E-08
+    
+    diffusion_k = diffusion_module_dAdK(
+        un = kn_min,
+        kzn = kk,
+        Uw = Uw(n),
+        depth= depth,
+        dx = dx,
+        area = area,
+        dt = dt,
+        nx = nx,
+        ice = ice, 
+        diffusion_method = diffusion_method,
+        scheme = scheme)
+    
+    k = diffusion_k['temp']
+    kk = diffusion_k['diffusivity']
+    print(f"TKE: {k}")
+    
+    diffusion_e = diffusion_module_dAdK(
+        un = en_min,
+        kzn = ke,
+        Uw = Uw(n),
+        depth= depth,
+        dx = dx,
+        area = area,
+        dt = dt,
+        nx = nx,
+        ice = ice, 
+        diffusion_method = diffusion_method,
+        scheme = scheme)
+    
+    e = diffusion_e['temp']
+    ke = diffusion_e['diffusivity']
+    print(f"TKE dissip.: {e}")
+    
+    plt.plot(np.log10(e), depth, '-b', label = 'eps')
+    plt.plot(np.log10(k), depth, '-r', label ='TKE')
+    plt.plot(np.log10(np.abs(v)), depth, '-g', label ='mean u velocity')
+    plt.plot(np.log10(np.abs(w)), depth, '-m', label ='mean v velocity')
+    plt.legend(loc="center right")
+    #plt.plot(u, depth)
+    plt.show()
+    
+    print(f"TKE before: {kn_min}")
+    print(f"TKE after: {k}")
+    
+    
+    #plt.plot(Qm[np.isfinite(Qm)])
+    #plt.show()
+    
+    #breakpoint()
+    
+    um_final[:, idn] = u
+    vm_final[:, idn] = v
+    wm_final[:, idn] = w
+    km_final[:, idn] = k
+    em_final[:, idn] = e
+    
+    kzm[:, idn] = kz
+    kzzm[:, idn] = kzz
+    kkm[:, idn] = kk
+    kem[:, idn] = ke
+
+    
+      
+  dat = {'temp_initial' : um_initial,
+  'temp_final' : um_final,
+  'v_initial' : vm_initial,
+  'v_final' : vm_final,
+  'w_initial' : wm_initial,
+  'w_final' : wm_final,
+  'k_initial' : km_initial,
+  'k_final' : km_final,
+  'eps_initial' : em_initial,
+  'eps_final' : em_final,
+  'kz' : kzm,
+  'kzz' : kzzm,
+  'kk' : kkm,
+  'ke' : kem,
+  'H_net' : Qm}
   
   return(dat)

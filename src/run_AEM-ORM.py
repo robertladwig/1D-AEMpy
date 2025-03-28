@@ -33,12 +33,12 @@ meteo_all = provide_meteorology(meteofile = '../../lakes/ormstrup/meteodriverdat
                     windfactor = 1.0)
                      
 ## time step discretization                      
-hydrodynamic_timestep = 86400 #2*24 * dt
-total_runtime =  150* hydrodynamic_timestep/dt #1*365* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+hydrodynamic_timestep = 24 * dt #2*24 * dt
+total_runtime =  2*365* hydrodynamic_timestep/dt #1*365* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
 startTime =   dt #(1) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
-times_meteo = pd.date_range(meteo_all[0]['date'][0], meteo_all[0]['date'][len(meteo_all[0]['date'])-1], freq='30min') #freq = '1/2h'
+times_meteo = pd.date_range(meteo_all[0]['date'][0], meteo_all[0]['date'][len(meteo_all[0]['date'])-1], freq='H') #freq = '1/2h'
 
 #startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
 #endingDate = meteo_all[0]['date'][(endTime-1)]#meteo_all[0]['date'][(startTime + total_runtime)]# * hydrodynamic_timestep/dt -1]
@@ -47,7 +47,7 @@ times_meteo = pd.date_range(meteo_all[0]['date'][0], meteo_all[0]['date'][len(me
 startingDate = times_meteo[int(startTime )]                                 
 endingDate = times_meteo[int(endTime)-1]
 
-times = pd.date_range(startingDate, endingDate , freq='30min')
+times = pd.date_range(startingDate, endingDate , freq='H')
 len(times)
 
 nTotalSteps = int(total_runtime)
@@ -74,7 +74,7 @@ Start = datetime.datetime.now()
 
 pgdl_mode = 'off'
     
-res = run_wq_model_time(  
+res = run_wq_model(  
     u = deepcopy(u_ini),
     o2 = 10 * volume,
     docr = 3.0 * volume,
@@ -150,7 +150,7 @@ res = run_wq_model_time(
     light_poc = 0.2,#0.7,
     mean_depth = sum(volume)/max(area),
     W_str = None,
-    tp_inflow = .1/1000 * volume[0], # * 1/1e6,
+    tp_inflow = 100/1000 * volume[0], # * 1/1e6,
     alg_inflow = 0.1 * volume[0] * 5/1e6,
     pocr_inflow = 0.5 * volume[0],
     pocl_inflow = 0.5 * volume[0],
@@ -222,7 +222,7 @@ time_label = times[::nelement]
 time_label = times[np.array(ax.get_xticks()).astype(int)]
 ax.set_xticklabels(time_label, rotation=15)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.rcParams.update({'font.size': 30})
 plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/lakemodel-ORM.png', transparent=True)
@@ -245,7 +245,7 @@ time_label = times[::nelement]
 time_label = times[np.array(ax.get_xticks()).astype(int)]
 ax.set_xticklabels(time_label, rotation=15)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.rcParams.update({'font.size': 30})
 plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/pocl-ORM.png', transparent=True)
@@ -268,7 +268,7 @@ time_label = times[::nelement]
 time_label = times[np.array(ax.get_xticks()).astype(int)]
 ax.set_xticklabels(time_label, rotation=15)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.rcParams.update({'font.size': 30})
 plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/o2-ORM.png', transparent=True)
@@ -292,7 +292,7 @@ time_label = times[::nelement]
 time_label = times[np.array(ax.get_xticks()).astype(int)]
 ax.set_xticklabels(time_label, rotation=15)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.rcParams.update({'font.size': 30})
 plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/gpp-ORM.png', transparent=True)
@@ -315,7 +315,7 @@ time_label = times[::nelement]
 time_label = times[np.array(ax.get_xticks()).astype(int)]
 ax.set_xticklabels(time_label, rotation=90)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -335,7 +335,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -360,7 +360,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -379,7 +379,7 @@ plt.show()
 # ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 # ax.set_xticklabels(time_label, rotation=0)
 # yticks_ix = np.array(ax.get_yticks()).astype(int)
-# depth_label = yticks_ix / 2
+# depth_label = yticks_ix / 4
 # ax.set_yticklabels(depth_label, rotation=0)
 # plt.show()
 
@@ -398,7 +398,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -418,7 +418,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -438,7 +438,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -458,7 +458,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -477,7 +477,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -498,7 +498,7 @@ plt.show()
 # ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 # ax.set_xticklabels(time_label, rotation=0)
 # yticks_ix = np.array(ax.get_yticks()).astype(int)
-# depth_label = yticks_ix / 2
+# depth_label = yticks_ix / 4
 # ax.set_yticklabels(depth_label, rotation=0)
 # plt.show()
 
@@ -517,7 +517,7 @@ plt.show()
 # ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 # ax.set_xticklabels(time_label, rotation=0)
 # yticks_ix = np.array(ax.get_yticks()).astype(int)
-# depth_label = yticks_ix / 2
+# depth_label = yticks_ix / 4
 # ax.set_yticklabels(depth_label, rotation=0)
 # plt.show()
 
@@ -536,7 +536,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -556,7 +556,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -575,7 +575,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -595,7 +595,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -614,7 +614,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -724,7 +724,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 # TODO
@@ -902,7 +902,7 @@ if pgdl_mode == 'on':
     time_label = times[np.array(ax.get_xticks()).astype(int)]
     ax.set_xticklabels(time_label, rotation=90)
     yticks_ix = np.array(ax.get_yticks()).astype(int)
-    depth_label = yticks_ix / 2
+    depth_label = yticks_ix / 4
     ax.set_yticklabels(depth_label, rotation=0)
     plt.show()
     
@@ -923,7 +923,7 @@ if pgdl_mode == 'on':
     time_label = times[np.array(ax.get_xticks()).astype(int)]
     ax.set_xticklabels(time_label, rotation=90)
     yticks_ix = np.array(ax.get_yticks()).astype(int)
-    depth_label = yticks_ix / 2
+    depth_label = yticks_ix / 4
     ax.set_yticklabels(depth_label, rotation=0)
     plt.show()
 
@@ -944,7 +944,7 @@ if pgdl_mode == 'on':
     time_label = times[np.array(ax.get_xticks()).astype(int)]
     ax.set_xticklabels(time_label, rotation=90)
     yticks_ix = np.array(ax.get_yticks()).astype(int)
-    depth_label = yticks_ix / 2
+    depth_label = yticks_ix / 4
     ax.set_yticklabels(depth_label, rotation=0)
     plt.show()
     
