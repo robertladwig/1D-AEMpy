@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
-from math import pi, exp, sqrt
+from math import pi, exp, sqrt, ceil
 from scipy.interpolate import interp1d
 from copy import deepcopy
 import datetime
@@ -17,32 +17,41 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 
 ## lake configurations
-zmax = 25 # maximum lake depth
-nx = 25 * 2 # number of layers we will have
-dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
+zmax = 5 # maximum lake depth
+nx = zmax * 4# number of layers we will have
+dt = 3600# 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
+
 ## area and depth values of our lake 
-area, depth, volume = get_hypsography(hypsofile = '../input/bathymetry.csv',
+area, depth, volume = get_hypsography(hypsofile = '../../lakes/ormstrup/bathymetry.csv',
                             dx = dx, nx = nx)
                            
 ## atmospheric boundary conditions
-meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
+meteo_all = provide_meteorology(meteofile = '../../lakes/ormstrup/meteodriverdata.csv',
                     secchifile = None, 
                     windfactor = 1.0)
                      
 ## time step discretization                      
-hydrodynamic_timestep = 24 * dt
-total_runtime =  (365 * 6) * hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
-startTime =   (140+365*6) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
+hydrodynamic_timestep = 24 * dt #2*24 * dt
+total_runtime =  2*365* hydrodynamic_timestep/dt #1*365* hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+startTime =   dt #(1) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
-startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
-endingDate = meteo_all[0]['date'][(endTime-1)]#meteo_all[0]['date'][(startTime + total_runtime)]# * hydrodynamic_timestep/dt -1]
+times_meteo = pd.date_range(meteo_all[0]['date'][0], meteo_all[0]['date'][len(meteo_all[0]['date'])-1], freq='H') #freq = '1/2h'
 
-times = pd.date_range(startingDate, endingDate, freq='H')
+#startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
+#endingDate = meteo_all[0]['date'][(endTime-1)]#meteo_all[0]['date'][(startTime + total_runtime)]# * hydrodynamic_timestep/dt -1]
+#endingDate = meteo_all[0]['date'][(ceil(endTime/(3600/dt))+1)-1]
+ 
+startingDate = times_meteo[int(startTime )]                                 
+endingDate = times_meteo[int(endTime)-1]
+
+times = pd.date_range(startingDate, endingDate , freq='H')
+len(times)
 
 nTotalSteps = int(total_runtime)
+print(nTotalSteps)
 
 ## here we define our initial profile
 u_ini = initial_profile(initfile = '../input/observedTemp.txt', nx = nx, dx = dx,
@@ -63,17 +72,17 @@ tp_boundary = tp_boundary.dropna(subset=['tp'])
 
 Start = datetime.datetime.now()
 
-pgdl_mode = 'on'
+pgdl_mode = 'off'
     
 res = run_wq_model(  
     u = deepcopy(u_ini),
-    o2 = deepcopy(wq_ini[0]),
-    docr = deepcopy(wq_ini[1]),
-    docl = 1.0 * volume,
+    o2 = 10 * volume,
+    docr = 3.0 * volume,
+    docl = 5.0 * volume,
     pocr = 0.5 * volume,
     pocl = 0.5 * volume,
     alg = 10/1000 * volume,
-    nutr = np.mean(tp_boundary['tp'])/1000* volume,
+    nutr = 2/1000* volume,
     startTime = startTime, 
     endTime = endTime, 
     area = area,
@@ -90,10 +99,10 @@ res = run_wq_model(
     Hi = 0,
     Hs = 0,
     Hsi = 0,
-    iceT = 6,
+    iceT = np.mean(u_ini),
     supercooled = 0,
-    coupled = 'off',
-    diffusion_method = 'hendersonSellers',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
+    coupled = 'on',
+    diffusion_method = 'hendersonSellers',# 'hendersonSellers',#'pacanowskiPhilander',# 'hendersonSellers', 'munkAnderson' 'hondzoStefan'
     scheme ='implicit',
     km = 1.4 * 10**(-7), # 4 * 10**(-6), 
     k0 = 1 * 10**(-2), #1e-2
@@ -105,15 +114,15 @@ res = run_wq_model(
     emissivity = 0.97,
     sigma = 5.67e-8,
     sw_factor = 1.0,
-    wind_factor = 1.0,
+    wind_factor = 1.0, #1.0,
     at_factor = 1.0,
     turb_factor = 1.0,
     p2 = 1,
     B = 0.61,
     g = 9.81,
-    Cd = 0.0013, # momentum coeff (wind)
+    Cd = 0.00010, #0.0013, # momentum coeff (wind)
     meltP = 1,
-    dt_iceon_avg = 0.8,
+    dt_iceon_avg = 0.5,
     Hgeo = 0.1, # geothermal heat 
     KEice = 0,
     Ice_min = 0.1,
@@ -121,15 +130,15 @@ res = run_wq_model(
     rho_snow = 250,
     p_max = 1/86400,
     IP = 3e-2/86400 ,#0.1, 3e-6
-    theta_npp = 1.0, #1.08,
+    theta_npp = 1.08, #1.08,
     theta_r = 1.08, #1.08,
     conversion_constant = 1e-4,#0.1
-    sed_sink =0.005 / 86400, #0.01
-    k_half = 3.1, #0.5,
-    resp_docr = 0.008/86400, # 0.08 0.001 0.0001
-    resp_docl = 0.008/86400, # 0.01 0.05
-    resp_pocr = 0.004/86400, # 0.04 0.1 0.001 0.0001
-    resp_pocl = 0.004/86400,
+    sed_sink = 0.0001 / 86400, #0.01 0.005
+    k_half = 0.5,#str(ddd0.5, #0.5,
+    resp_docr = 0.1/86400, # 0.08 0.001 0.0001
+    resp_docl = 0.1/86400, # 0.01 0.05
+    resp_pocr = 0.05/86400, # 0.04 0.1 0.001 0.0001
+    resp_pocl = 0.05/86400,
     grazing_rate = 0.9/86400, #1e-1/86400, # 3e-3/86400
     pocr_settling_rate = 1e-3/86400,
     pocl_settling_rate = 1e-3/86400,
@@ -138,21 +147,21 @@ res = run_wq_model(
     piston_velocity = 1.0/86400,
     light_water = 0.125,
     light_doc = 0.02,
-    light_poc = 0.7,
+    light_poc = 0.2,#0.7,
     mean_depth = sum(volume)/max(area),
     W_str = None,
-    tp_inflow = np.mean(tp_boundary['tp'])/1000 * volume[0], # * 1/1e6,
-    alg_inflow = 9.1 * volume[0] * 5/1e6,
+    tp_inflow = 100/1000 * volume[0], # * 1/1e6,
+    alg_inflow = 0.1 * volume[0] * 5/1e6,
     pocr_inflow = 0.5 * volume[0],
     pocl_inflow = 0.5 * volume[0],
-    f_sod = 0.01 / 86400,
-    d_thick = 0.001,
+    f_sod = 10/86400, #0.01 / 86400,
+    d_thick = 0.01,
     growth_rate = 0.5/86400, # 1.0e-3
     grazing_ratio = 0.1,
     alpha_gpp = 0.03/86400,
     beta_gpp = 0.00017/86400,
     o2_to_chla = 2.15/3600,
-    settling_rate = 0.3 / 86400,
+    settling_rate = 0.01 / 86400,
     q_in = 1)
 
 temp=  res['temp']
@@ -188,29 +197,10 @@ thermo_dep = res['thermo_dep']
 energy_ratio = res['energy_ratio']
 
 
-tempchange_conv = temp_diff * 0.0
-densdiff_conv = temp_diff * 0.0
-
-cols = len(temp_mix[0])
-for i in range(cols):
-    density_val = calc_dens(temp_diff[:,i])
-    densdiff_conv[:-1,i] = density_val[0:-1] - density_val[1:]
-    tempchange_conv[:-1,i] = temp_diff[1:,i]
-
 End = datetime.datetime.now()
 print(End - Start)
 
-    
-plt.plot(times, energy_ratio[0,:])
-plt.show()
 
-plt.plot(times, kd[0,:])
-plt.show()
-
-plt.plot(times, np.log(docr[0,:]))
-plt.plot(times, np.log(docl[0,:]))
-plt.plot(times, np.log(pocr[0,:]))
-plt.plot(times, np.log(pocl[0,:]))
 # heatmap of temps  
 N_pts = 6
 
@@ -232,10 +222,80 @@ time_label = times[::nelement]
 time_label = times[np.array(ax.get_xticks()).astype(int)]
 ax.set_xticklabels(time_label, rotation=15)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.rcParams.update({'font.size': 30})
-plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/lakemodel.png', transparent=True)
+plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/lakemodel-ORM.png', transparent=True)
+plt.show()
+
+fig, ax = plt.subplots(figsize=(20,15))
+sns.heatmap(np.transpose(np.transpose(pocl)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+           colors=['black', 'gray'],
+           linestyles = 'dotted')
+ax.set_ylabel("Depth (m)", fontsize=15)
+ax.set_xlabel("", fontsize=15)    
+ax.collections[0].colorbar.set_label("POC-labile  (g/m3)")
+xticks_ix = np.array(ax.get_xticks()).astype(int)
+time_label = times[xticks_ix]
+nelement = len(times)//2
+time_label = times[::nelement]
+#time_label = time_label[::nelement]
+#ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+time_label = times[np.array(ax.get_xticks()).astype(int)]
+ax.set_xticklabels(time_label, rotation=15)
+yticks_ix = np.array(ax.get_yticks()).astype(int)
+depth_label = yticks_ix / 4
+ax.set_yticklabels(depth_label, rotation=0)
+plt.rcParams.update({'font.size': 30})
+plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/pocl-ORM.png', transparent=True)
+plt.show()
+
+fig, ax = plt.subplots(figsize=(20,15))
+sns.heatmap(np.transpose(np.transpose(o2)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+           colors=['black', 'gray'],
+           linestyles = 'dotted')
+ax.set_ylabel("Depth (m)", fontsize=15)
+ax.set_xlabel("", fontsize=15)    
+ax.collections[0].colorbar.set_label("Dissolved oxygen (g/m3)")
+xticks_ix = np.array(ax.get_xticks()).astype(int)
+time_label = times[xticks_ix]
+nelement = len(times)//10
+time_label = times[::nelement]
+#time_label = time_label[::nelement]
+#ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+time_label = times[np.array(ax.get_xticks()).astype(int)]
+ax.set_xticklabels(time_label, rotation=15)
+yticks_ix = np.array(ax.get_yticks()).astype(int)
+depth_label = yticks_ix / 4
+ax.set_yticklabels(depth_label, rotation=0)
+plt.rcParams.update({'font.size': 30})
+plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/o2-ORM.png', transparent=True)
+plt.show()
+
+
+fig, ax = plt.subplots(figsize=(20,15))
+sns.heatmap(npp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+           colors=['black', 'gray'],
+           linestyles = 'dotted')
+ax.set_ylabel("Depth (m)", fontsize=15)
+ax.set_xlabel("", fontsize=15)    
+ax.collections[0].colorbar.set_label("GPP (/d)")
+xticks_ix = np.array(ax.get_xticks()).astype(int)
+time_label = times[xticks_ix]
+nelement = len(times)//2
+time_label = times[::nelement]
+#time_label = time_label[::nelement]
+#ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+time_label = times[np.array(ax.get_xticks()).astype(int)]
+ax.set_xticklabels(time_label, rotation=15)
+yticks_ix = np.array(ax.get_yticks()).astype(int)
+depth_label = yticks_ix / 4
+ax.set_yticklabels(depth_label, rotation=0)
+plt.rcParams.update({'font.size': 30})
+plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/gpp-ORM.png', transparent=True)
 plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
@@ -255,7 +315,7 @@ time_label = times[::nelement]
 time_label = times[np.array(ax.get_xticks()).astype(int)]
 ax.set_xticklabels(time_label, rotation=90)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -275,7 +335,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -300,28 +360,28 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
-fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(alg)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
-ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
-           colors=['black', 'gray'],
-           linestyles = 'dotted')
-ax.set_ylabel("Depth (m)", fontsize=15)
-ax.set_xlabel("Time", fontsize=15)    
-ax.collections[0].colorbar.set_label("Algae (g/m3)")
-xticks_ix = np.array(ax.get_xticks()).astype(int)
-time_label = times[xticks_ix]
-nelement = len(times)//N_pts
-#time_label = time_label[::nelement]
-ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
-ax.set_xticklabels(time_label, rotation=0)
-yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
-ax.set_yticklabels(depth_label, rotation=0)
-plt.show()
+# fig, ax = plt.subplots(figsize=(15,5))
+# sns.heatmap(np.transpose(np.transpose(alg)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+# ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+#            colors=['black', 'gray'],
+#            linestyles = 'dotted')
+# ax.set_ylabel("Depth (m)", fontsize=15)
+# ax.set_xlabel("Time", fontsize=15)    
+# ax.collections[0].colorbar.set_label("Algae (g/m3)")
+# xticks_ix = np.array(ax.get_xticks()).astype(int)
+# time_label = times[xticks_ix]
+# nelement = len(times)//N_pts
+# #time_label = time_label[::nelement]
+# ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+# ax.set_xticklabels(time_label, rotation=0)
+# yticks_ix = np.array(ax.get_yticks()).astype(int)
+# depth_label = yticks_ix / 4
+# ax.set_yticklabels(depth_label, rotation=0)
+# plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
 sns.heatmap(np.transpose(np.transpose(nutr)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
@@ -338,7 +398,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -358,7 +418,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -378,7 +438,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -398,7 +458,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -417,68 +477,49 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
 
-fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(pocl[:,1:2000])/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
-ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
-           colors=['black', 'gray'],
-           linestyles = 'dotted')
-ax.set_ylabel("Depth (m)", fontsize=15)
-ax.set_xlabel("Time", fontsize=15)    
-ax.collections[0].colorbar.set_label("POC-labile  (g/m3)")
-xticks_ix = np.array(ax.get_xticks()).astype(int)
-time_label = times[xticks_ix]
-nelement = len(times)//N_pts
-#time_label = time_label[::nelement]
-ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
-ax.set_xticklabels(time_label, rotation=0)
-yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
-ax.set_yticklabels(depth_label, rotation=0)
-plt.show()
 
+# fig, ax = plt.subplots(figsize=(15,5))
+# sns.heatmap(np.transpose(np.transpose(algae_growth)) , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+# ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+#            colors=['black', 'gray'],
+#            linestyles = 'dotted')
+# ax.set_ylabel("Depth (m)", fontsize=15)
+# ax.set_xlabel("Time", fontsize=15)    
+# ax.collections[0].colorbar.set_label("Algae growth  (/d)")
+# xticks_ix = np.array(ax.get_xticks()).astype(int)
+# time_label = times[xticks_ix]
+# nelement = len(times)//N_pts
+# #time_label = time_label[::nelement]
+# ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+# ax.set_xticklabels(time_label, rotation=0)
+# yticks_ix = np.array(ax.get_yticks()).astype(int)
+# depth_label = yticks_ix / 4
+# ax.set_yticklabels(depth_label, rotation=0)
+# plt.show()
 
-fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(algae_growth)) , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
-ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
-           colors=['black', 'gray'],
-           linestyles = 'dotted')
-ax.set_ylabel("Depth (m)", fontsize=15)
-ax.set_xlabel("Time", fontsize=15)    
-ax.collections[0].colorbar.set_label("Algae growth  (/d)")
-xticks_ix = np.array(ax.get_xticks()).astype(int)
-time_label = times[xticks_ix]
-nelement = len(times)//N_pts
-#time_label = time_label[::nelement]
-ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
-ax.set_xticklabels(time_label, rotation=0)
-yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
-ax.set_yticklabels(depth_label, rotation=0)
-plt.show()
-
-fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(algae_grazing)) , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
-ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
-           colors=['black', 'gray'],
-           linestyles = 'dotted')
-ax.set_ylabel("Depth (m)", fontsize=15)
-ax.set_xlabel("Time", fontsize=15)    
-ax.collections[0].colorbar.set_label("Algae grazing  (/d)")
-xticks_ix = np.array(ax.get_xticks()).astype(int)
-time_label = times[xticks_ix]
-nelement = len(times)//N_pts
-#time_label = time_label[::nelement]
-ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
-ax.set_xticklabels(time_label, rotation=0)
-yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
-ax.set_yticklabels(depth_label, rotation=0)
-plt.show()
+# fig, ax = plt.subplots(figsize=(15,5))
+# sns.heatmap(np.transpose(np.transpose(algae_grazing)) , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+# ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+#            colors=['black', 'gray'],
+#            linestyles = 'dotted')
+# ax.set_ylabel("Depth (m)", fontsize=15)
+# ax.set_xlabel("Time", fontsize=15)    
+# ax.collections[0].colorbar.set_label("Algae grazing  (/d)")
+# xticks_ix = np.array(ax.get_xticks()).astype(int)
+# time_label = times[xticks_ix]
+# nelement = len(times)//N_pts
+# #time_label = time_label[::nelement]
+# ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+# ax.set_xticklabels(time_label, rotation=0)
+# yticks_ix = np.array(ax.get_yticks()).astype(int)
+# depth_label = yticks_ix / 4
+# ax.set_yticklabels(depth_label, rotation=0)
+# plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
 sns.heatmap(npp , cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
@@ -495,7 +536,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -515,7 +556,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -534,7 +575,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -554,7 +595,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -573,7 +614,7 @@ nelement = len(times)//N_pts
 ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
 ax.set_xticklabels(time_label, rotation=0)
 yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
+depth_label = yticks_ix / 4
 ax.set_yticklabels(depth_label, rotation=0)
 plt.show()
 
@@ -590,12 +631,17 @@ plt.show()
 # plt.plot(o2[(nx-1),:]/volume[(nx-1)])
 
 #plt.plot(o2[1,1:(24*28)]/volume[1]/4, color = 'blue', label = 'O2')
-nep = 1/86400 *alg[1,:] *npp[1,:] -1/86400 *(docl[1,:] * docl_respiration[1,:]+ docr[1,:] * docr_respiration[1,:] + pocl[1,:] * pocl_respiration[1,:] + pocr[1,:] * pocr_respiration[1,:])
-plt.plot(alg[1,1:(24*90)] *npp[1,1:(24*90)]* 1/86400 * 1/ volume[1], color = 'green', label = 'GPP') 
-plt.plot(1/86400*(docl[1,1:(24*90)] * docl_respiration[1,1:(24*90)]+ docr[1,1:(24*90)] * docr_respiration[1,1:(24*90)] + pocl[1,1:(24*90)] * pocl_respiration[1,1:(24*90)] + pocr[1,1:(24*90)] * pocr_respiration[1,1:(24*90)])/volume[1] , color = 'red', label = 'R') 
-plt.plot(nep[1:(24*90)]/volume[1] , color = 'yellow', label = 'NEP')
+
+fig, ax = plt.subplots(figsize=(20,15))
+nep = 1/86400 *pocl[1,:] *npp[1,:] -1/86400 *(docl[1,:] * docl_respiration[1,:]+ docr[1,:] * docr_respiration[1,:] + pocl[1,:] * pocl_respiration[1,:] + pocr[1,:] * pocr_respiration[1,:])
+plt.plot(pocl[1,1:(24*30)] *npp[1,1:(24*30)]* 1/86400 * 1/ volume[1], color = 'green', label = 'GPP') 
+plt.plot(1/86400*(docl[1,1:(24*30)] * docl_respiration[1,1:(24*30)]+ docr[1,1:(24*30)] * docr_respiration[1,1:(24*30)] + pocl[1,1:(24*30)] * pocl_respiration[1,1:(24*30)] + pocr[1,1:(24*30)] * pocr_respiration[1,1:(24*30)])/volume[1] , color = 'red', label = 'R') 
+plt.plot(nep[1:(24*30)]/volume[1] , color = 'yellow', label = 'NEP')
 plt.legend(loc='best')
-plt.show() 
+plt.ylabel("(g /m3 /s)")
+plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/metabolism.png', transparent=True)
+plt.show()
+
 
 plt.plot(times, kd[0,:])
 plt.ylabel("kd (/m)")
@@ -613,6 +659,74 @@ plt.plot(times, thermo_dep[0,:]*dx,color= 'blue')
 plt.plot(times, temp[0,:] - temp[(nx-1),:], color = 'red')
 plt.show()
 
+
+fig, axs = plt.subplots(5, figsize = (20,30))
+
+zp = 0
+nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
+axs[0].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
+axs[0].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
+axs[0].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
+axs[0].set_title(depth[zp])
+
+
+zp = 2
+nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
+axs[1].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
+axs[1].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
+axs[1].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
+axs[1].set_title(depth[zp])
+
+
+zp = 4
+nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
+axs[2].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
+axs[2].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
+axs[2].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
+axs[2].set_title(depth[zp])
+
+zp = 6
+nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
+axs[3].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
+axs[3].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
+axs[3].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
+axs[3].set_title(depth[zp])
+
+
+zp = 9
+nep = 1/86400 *pocl[zp,:] *npp[zp,:] -1/86400 *(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])
+axs[4].plot(times,pocl[zp,: ] *npp[zp,:]* 1/86400 * 1/ volume[zp], color = 'green', label = 'GPP') 
+axs[4].plot(times,1/86400*(docl[zp,:] * docl_respiration[zp,:]+ docr[zp,:] * docr_respiration[zp,:] + pocl[zp,:] * pocl_respiration[zp,:] + pocr[zp,:] * pocr_respiration[zp,:])/volume[zp] , color = 'red', label = 'ER') 
+axs[4].plot(times,nep/volume[zp] , color = 'yellow', label = 'NEP')
+axs[4].set_title(depth[zp])
+plt.show()
+lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+fig.legend(lines, labels)
+plt.show()
+
+
+
+nep = 1/86400 *pocl *npp -1/86400 *(docl* docl_respiration+ docr * docr_respiration+ pocl * pocl_respiration+ pocr * pocr_respiration)
+
+fig, ax = plt.subplots(figsize=(15,5))
+sns.heatmap(np.transpose(np.transpose(nep)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
+ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
+           colors=['black', 'gray'],
+           linestyles = 'dotted')
+ax.set_ylabel("Depth (m)", fontsize=15)
+ax.set_xlabel("Time", fontsize=15)    
+ax.collections[0].colorbar.set_label("NEP  (g//m3/d)")
+xticks_ix = np.array(ax.get_xticks()).astype(int)
+time_label = times[xticks_ix]
+nelement = len(times)//N_pts
+#time_label = time_label[::nelement]
+ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
+ax.set_xticklabels(time_label, rotation=0)
+yticks_ix = np.array(ax.get_yticks()).astype(int)
+depth_label = yticks_ix / 4
+ax.set_yticklabels(depth_label, rotation=0)
+plt.show()
 # TODO
 # air water exchange
 # sediment loss POC
@@ -709,24 +823,6 @@ if pgdl_mode == 'on':
     df = pd.concat([df1, df2], axis = 1)
     df.to_csv('../mcl/output/py_buoyancy.csv', index=None)
     
-    # temp next for convection
-    df1 = pd.DataFrame(times)
-    df1.columns = ['time']
-    t1 = np.matrix(tempchange_conv)
-    t1 = t1.getT()
-    df2 = pd.DataFrame(t1)
-    df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp-conv.csv', index=None)
-    
-    # density diff for convection
-    df1 = pd.DataFrame(times)
-    df1.columns = ['time']
-    t1 = np.matrix(densdiff_conv)
-    t1 = t1.getT()
-    df2 = pd.DataFrame(t1)
-    df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_density-conv.csv', index=None)
-    
     # meteorology
     df1 = pd.DataFrame(times)
     df1.columns = ['time']
@@ -770,9 +866,6 @@ if pgdl_mode == 'on':
     dt_red = dt[dt['time'] >= startingDate]
     dt_red = dt_red[dt_red['time'] <= endingDate]
     
-    time_vector = dt_red['time']
-    missing_dates = time_vector[~time_vector.isin(times)]
-    
     # let's set surface to 0 if airtemp is below 0, assuming we have ice
     temp_flag = df_airtemp <= 0
     wtr_0m = np.array(dt_red['var.0'])
@@ -809,7 +902,7 @@ if pgdl_mode == 'on':
     time_label = times[np.array(ax.get_xticks()).astype(int)]
     ax.set_xticklabels(time_label, rotation=90)
     yticks_ix = np.array(ax.get_yticks()).astype(int)
-    depth_label = yticks_ix / 2
+    depth_label = yticks_ix / 4
     ax.set_yticklabels(depth_label, rotation=0)
     plt.show()
     
@@ -830,7 +923,7 @@ if pgdl_mode == 'on':
     time_label = times[np.array(ax.get_xticks()).astype(int)]
     ax.set_xticklabels(time_label, rotation=90)
     yticks_ix = np.array(ax.get_yticks()).astype(int)
-    depth_label = yticks_ix / 2
+    depth_label = yticks_ix / 4
     ax.set_yticklabels(depth_label, rotation=0)
     plt.show()
 
@@ -851,7 +944,7 @@ if pgdl_mode == 'on':
     time_label = times[np.array(ax.get_xticks()).astype(int)]
     ax.set_xticklabels(time_label, rotation=90)
     yticks_ix = np.array(ax.get_yticks()).astype(int)
-    depth_label = yticks_ix / 2
+    depth_label = yticks_ix / 4
     ax.set_yticklabels(depth_label, rotation=0)
     plt.show()
     

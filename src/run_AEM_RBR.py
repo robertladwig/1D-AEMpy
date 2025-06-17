@@ -17,24 +17,24 @@ from processBased_lakeModel_functions import get_hypsography, provide_meteorolog
 
 
 ## lake configurations
-zmax = 25 # maximum lake depth
-nx = 25 * 2 # number of layers we will have
+zmax = 85 # maximum lake depth
+nx = 85 * 2# number of layers we will have
 dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
 ## area and depth values of our lake 
-area, depth, volume = get_hypsography(hypsofile = '../input/bathymetry.csv',
+area, depth, volume = get_hypsography(hypsofile = '../../lakes/rappbode/bathymetry.csv',
                             dx = dx, nx = nx)
                            
 ## atmospheric boundary conditions
-meteo_all = provide_meteorology(meteofile = '../input/Mendota_2002.csv',
+meteo_all = provide_meteorology(meteofile = '../../lakes/rappbode/meteodriverdata.csv',
                     secchifile = None, 
                     windfactor = 1.0)
                      
 ## time step discretization                      
 hydrodynamic_timestep = 24 * dt
-total_runtime =  (365 * 6) * hydrodynamic_timestep/dt # (365 *6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
-startTime =   (140+365*6) * hydrodynamic_timestep/dt  #150 * 24 * 3600  (120 + 365*5)
+total_runtime =  (365*6) * hydrodynamic_timestep/dt #(365 * 6) * hydrodynamic_timestep/dt  #365 *1 # 14 * 365  (365 *1.7) 
+startTime =  1  #150 * 24 * 3600  (120 + 365*5)
 endTime =  (startTime + total_runtime) # * hydrodynamic_timestep/dt) - 1
 
 startingDate = meteo_all[0]['date'][startTime] #* hydrodynamic_timestep/dt]
@@ -45,9 +45,15 @@ times = pd.date_range(startingDate, endingDate, freq='H')
 nTotalSteps = int(total_runtime)
 
 ## here we define our initial profile
-u_ini = initial_profile(initfile = '../input/observedTemp.txt', nx = nx, dx = dx,
-                     depth = depth,
-                     startDate = startingDate)
+dt_da = pd.read_csv('../../lakes/rappbode/observed.csv', index_col=0)
+dt_da=dt_da.rename(columns = {'DateTime':'time'})
+dt_da['time'] = pd.to_datetime(dt_da['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
+dt_red = dt_da[dt_da['time'] >= startingDate]
+dt_red = dt_red[dt_red['time'] <= endingDate]
+u_ini = dt_red.iloc[0,1:].to_numpy()
+u_ini = u_ini[0:(len(u_ini)-2)]
+
+u_ini =pd.to_numeric(u_ini,errors='coerce')
 
 wq_ini = wq_initial_profile(initfile = '../input/mendota_driver_data_v2.csv',
                             nx = nx, dx = dx,
@@ -61,6 +67,8 @@ tp_boundary = provide_phosphorus(tpfile =  '../input/Mendota_observations_tp.csv
 
 tp_boundary = tp_boundary.dropna(subset=['tp'])
 
+#u_ini = np.ones(nx)*10
+
 Start = datetime.datetime.now()
 
 pgdl_mode = 'on'
@@ -73,7 +81,7 @@ res = run_wq_model(
     pocr = 0.5 * volume,
     pocl = 0.5 * volume,
     alg = 10/1000 * volume,
-    nutr = np.mean(tp_boundary['tp'])/1000* volume,
+    nutr = 10/1000 * volume,
     startTime = startTime, 
     endTime = endTime, 
     area = area,
@@ -98,7 +106,7 @@ res = run_wq_model(
     km = 1.4 * 10**(-7), # 4 * 10**(-6), 
     k0 = 1 * 10**(-2), #1e-2
     weight_kz = 0.5,
-    kd_light = 0.6, 
+    kd_light = 0.5, 
     denThresh = 1e-2,
     albedo = 0.1,
     eps = 0.97,
@@ -141,19 +149,17 @@ res = run_wq_model(
     light_poc = 0.7,
     mean_depth = sum(volume)/max(area),
     W_str = None,
-    tp_inflow = np.mean(tp_boundary['tp'])/1000 * volume[0], # * 1/1e6,
-    alg_inflow = 9.1 * volume[0] * 5/1e6,
-    pocr_inflow = 0.5 * volume[0],
-    pocl_inflow = 0.5 * volume[0],
+    tp_inflow = 0,#np.mean(tp_boundary['tp'])/1000 * volume[0] * 1/1e6,
+    alg_inflow = 0.1 * volume[0] * 5/1e6,
+    pocr_inflow = 0.1 * volume[0] * 1/1e7,
+    pocl_inflow = 0.1 * volume[0] * 1/1e7,
     f_sod = 0.01 / 86400,
     d_thick = 0.001,
     growth_rate = 0.5/86400, # 1.0e-3
     grazing_ratio = 0.1,
     alpha_gpp = 0.03/86400,
     beta_gpp = 0.00017/86400,
-    o2_to_chla = 2.15/3600,
-    settling_rate = 0.3 / 86400,
-    q_in = 1)
+    o2_to_chla = 2.15/3600)
 
 temp=  res['temp']
 o2=  res['o2']
@@ -187,7 +193,6 @@ kd = res['kd_light']
 thermo_dep = res['thermo_dep']
 energy_ratio = res['energy_ratio']
 
-
 tempchange_conv = temp_diff * 0.0
 densdiff_conv = temp_diff * 0.0
 
@@ -197,6 +202,7 @@ for i in range(cols):
     densdiff_conv[:-1,i] = density_val[0:-1] - density_val[1:]
     tempchange_conv[:-1,i] = temp_diff[1:,i]
 
+
 End = datetime.datetime.now()
 print(End - Start)
 
@@ -204,39 +210,10 @@ print(End - Start)
 plt.plot(times, energy_ratio[0,:])
 plt.show()
 
-plt.plot(times, kd[0,:])
-plt.show()
-
-plt.plot(times, np.log(docr[0,:]))
-plt.plot(times, np.log(docl[0,:]))
-plt.plot(times, np.log(pocr[0,:]))
-plt.plot(times, np.log(pocl[0,:]))
 # heatmap of temps  
 N_pts = 6
 
 
-fig, ax = plt.subplots(figsize=(20,15))
-sns.heatmap(temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
-ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
-           colors=['black', 'gray'],
-           linestyles = 'dotted')
-ax.set_ylabel("Depth (m)", fontsize=15)
-ax.set_xlabel("", fontsize=15)    
-ax.collections[0].colorbar.set_label("Water temperature  ($^\circ$C)")
-xticks_ix = np.array(ax.get_xticks()).astype(int)
-time_label = times[xticks_ix]
-nelement = len(times)//2
-time_label = times[::nelement]
-#time_label = time_label[::nelement]
-#ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
-time_label = times[np.array(ax.get_xticks()).astype(int)]
-ax.set_xticklabels(time_label, rotation=15)
-yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
-ax.set_yticklabels(depth_label, rotation=0)
-plt.rcParams.update({'font.size': 30})
-plt.savefig('C:/Users/au740615/OneDrive - Aarhus universitet/Desktop/lakemodel.png', transparent=True)
-plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
 sns.heatmap(temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
@@ -404,26 +381,6 @@ plt.show()
 
 fig, ax = plt.subplots(figsize=(15,5))
 sns.heatmap(np.transpose(np.transpose(pocl)/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
-ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
-           colors=['black', 'gray'],
-           linestyles = 'dotted')
-ax.set_ylabel("Depth (m)", fontsize=15)
-ax.set_xlabel("Time", fontsize=15)    
-ax.collections[0].colorbar.set_label("POC-labile  (g/m3)")
-xticks_ix = np.array(ax.get_xticks()).astype(int)
-time_label = times[xticks_ix]
-nelement = len(times)//N_pts
-#time_label = time_label[::nelement]
-ax.xaxis.set_major_locator(plt.MaxNLocator(N_pts))
-ax.set_xticklabels(time_label, rotation=0)
-yticks_ix = np.array(ax.get_yticks()).astype(int)
-depth_label = yticks_ix / 2
-ax.set_yticklabels(depth_label, rotation=0)
-plt.show()
-
-
-fig, ax = plt.subplots(figsize=(15,5))
-sns.heatmap(np.transpose(np.transpose(pocl[:,1:2000])/volume), cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0)
 ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
            colors=['black', 'gray'],
            linestyles = 'dotted')
@@ -635,7 +592,7 @@ if pgdl_mode == 'on':
     df1.insert(2, "Osgood", df_osgood, True)
     df1.insert(3, "MaxDepth_m", df_maxdepth, True)
     df1.insert(4, "MeanDepth_m", df_meandepth, True)
-    df1.to_csv('../mcl/output/py_lakecharacteristics.csv', index=None)
+    df1.to_csv('../../lakes/rappbode/output/py_lakecharacteristics.csv', index=None)
     
     # initial temp.
     df1 = pd.DataFrame(times)
@@ -644,7 +601,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp_initial00.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_temp_initial00.csv', index=None)
     
     # heat temp.
     df1 = pd.DataFrame(times)
@@ -653,7 +610,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp_heat01.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_temp_heat01.csv', index=None)
     
     # diffusion temp.
     df1 = pd.DataFrame(times)
@@ -662,7 +619,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp_diff03.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_temp_diff03.csv', index=None)
     
     # mixing temp.
     df1 = pd.DataFrame(times)
@@ -671,7 +628,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp_mix05.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_temp_mix05.csv', index=None)
     
     # convection temp.
     df1 = pd.DataFrame(times)
@@ -680,7 +637,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp_conv04.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_temp_conv04.csv', index=None)
     
     # ice temp.
     df1 = pd.DataFrame(times)
@@ -689,7 +646,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp_ice02.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_temp_ice02.csv', index=None)
     
     # diffusivity
     df1 = pd.DataFrame(times)
@@ -698,7 +655,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_diff.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_diff.csv', index=None)
     
     # buoyancy
     df1 = pd.DataFrame(times)
@@ -707,7 +664,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_buoyancy.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_buoyancy.csv', index=None)
     
     # temp next for convection
     df1 = pd.DataFrame(times)
@@ -716,7 +673,7 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_temp-conv.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_temp-conv.csv', index=None)
     
     # density diff for convection
     df1 = pd.DataFrame(times)
@@ -725,7 +682,8 @@ if pgdl_mode == 'on':
     t1 = t1.getT()
     df2 = pd.DataFrame(t1)
     df = pd.concat([df1, df2], axis = 1)
-    df.to_csv('../mcl/output/py_density-conv.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_density-conv.csv', index=None)
+    
     
     # meteorology
     df1 = pd.DataFrame(times)
@@ -742,7 +700,7 @@ if pgdl_mode == 'on':
                       'dt_iceon_avg_prior', 'icemovAvg_prior']
     df = pd.concat([df1, df2], axis = 1)
     df_airtemp = df['AirTemp_degC']
-    df.to_csv('../mcl/output/py_meteorology_input.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_meteorology_input.csv', index=None)
     
         
     # ice-snow
@@ -761,34 +719,63 @@ if pgdl_mode == 'on':
     df4 = pd.DataFrame(t1)
     df4.columns = ['snowice']
     df = pd.concat([df1, df2, df3, df4], axis = 1)
-    df.to_csv('../mcl/output/py_icesnow.csv', index=None)
+    df.to_csv('../../lakes/rappbode/output/py_icesnow.csv', index=None)
     
     # observed data
-    dt = pd.read_csv('../mcl/input/observed_df_lter_hourly_wide_clean.csv', index_col=0)
+    dt = pd.read_csv('../../lakes/rappbode/observed_interp.csv', index_col=0)
     dt=dt.rename(columns = {'DateTime':'time'})
     dt['time'] = pd.to_datetime(dt['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
     dt_red = dt[dt['time'] >= startingDate]
     dt_red = dt_red[dt_red['time'] <= endingDate]
     
-    time_vector = dt_red['time']
-    missing_dates = time_vector[~time_vector.isin(times)]
-    
     # let's set surface to 0 if airtemp is below 0, assuming we have ice
     temp_flag = df_airtemp <= 0
-    wtr_0m = np.array(dt_red['var.0'])
-    wtr_05m = np.array(dt_red['var.0.5'])
+    wtr_0m = np.array(dt_red['var..0'])
+    wtr_05m = np.array(dt_red['var..0.5'])
     wtr_0m[temp_flag] = 0
     wtr_05m[temp_flag] = 0
-    dt_red['var.0'] = wtr_0m
-    dt_red['var.0.5'] = wtr_05m 
-    dt_red.to_csv('../mcl/output/py_observed_temp.csv', index=None, na_rep='-999')
+    dt_red['var..0'] = wtr_0m
+    dt_red['var..0.5'] = wtr_05m 
+    dt_red.to_csv('../../lakes/rappbode/output/py_observed_temp.csv', index=None, na_rep='-999')
     
     dt_notime = dt_red.drop(dt_red.columns[[0]], axis = 1)
     dt_notime = dt_notime.transpose()
     dt_obs = dt_notime.to_numpy()
     dt_obs.shape
+    temp.shape
     
+    dt_obs=dt_obs[:-1,:]
+    dt_obs=dt_obs[:-1,:]
+    dt_obs.shape
     # heatmap of temps  
+    
+    # observed data
+    dt = pd.read_csv('../../lakes/rappbode/observed_interp.csv', index_col=0)
+    dt=dt.rename(columns = {'DateTime':'time'})
+    dt['time'] = pd.to_datetime(dt['time']) # pd.to_datetime(dt['time'], format='%Y-%m-%d %H')
+    dt_red = dt[dt['time'] >= startingDate]
+    dt_red = dt_red[dt_red['time'] <= endingDate]
+    
+    dt_red.head
+    
+    # let's set surface to 0 if airtemp is below 0, assuming we have ice
+    temp_flag = df_airtemp <= 0
+    wtr_0m = np.array(dt_red['var..0'])
+    wtr_05m = np.array(dt_red['var..0.5'])
+    wtr_0m[temp_flag] = 0
+    wtr_05m[temp_flag] = 0
+    dt_red['var..0'] = wtr_0m
+    dt_red['var..0.5'] = wtr_05m 
+    
+    #dt_red=dt_red[:-1,:]
+    
+    print(dt_red.shape)
+    dt_red.drop(dt_red.columns[len(dt_red.columns)-1], axis=1, inplace=True)
+    dt_red.drop(dt_red.columns[len(dt_red.columns)-1], axis=1, inplace=True)
+    print(dt_red.shape)
+    print(dt_red)
+    
+    dt_red.to_csv('../../lakes/rappbode/output/py_observed_temp.csv', index=None, na_rep='-999')
 
     
     diff_temp = temp - dt_obs
@@ -835,7 +822,7 @@ if pgdl_mode == 'on':
     plt.show()
 
     fig, ax = plt.subplots(figsize=(15,5))
-    sns.heatmap(diff_temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0, vmax = 15)
+    sns.heatmap(diff_temp, cmap=plt.cm.get_cmap('Spectral_r'),  xticklabels=1000, yticklabels=2, vmin = 0, vmax = 10)
     ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens(temp), levels=[999],
                colors=['black', 'gray'],
                linestyles = 'dotted')
@@ -861,22 +848,27 @@ if pgdl_mode == 'on':
     axs[0].plot(times, dt_obs[0,:], color ='red', label = 'observed')
     axs[0].plot(times, temp[0,:], label = 'modeled')
     axs[0].set_title(depth[0])
+    axs[0].set_ylim(0,25)
     
     axs[1].plot(times, dt_obs[10,:], color ='red')
     axs[1].plot(times, temp[10,:])
     axs[1].set_title(depth[10])
+    axs[1].set_ylim(0,25)
     
     axs[2].plot(times, dt_obs[25,:], color ='red')
     axs[2].plot(times, temp[25,:])
     axs[2].set_title(depth[25])
+    axs[2].set_ylim(0,25)
     
-    axs[3].plot(times, dt_obs[37,:], color ='red')
-    axs[3].plot(times, temp[37,:])
-    axs[3].set_title(depth[37])
+    axs[3].plot(times, dt_obs[37*2,:], color ='red')
+    axs[3].plot(times, temp[37*2,:])
+    axs[3].set_title(depth[37*2])
+    axs[3].set_ylim(0,10)
     
-    axs[4].plot(times, dt_obs[48,:], color ='red')
-    axs[4].plot(times, temp[48,:])
-    axs[4].set_title(depth[48])
+    axs[4].plot(times, dt_obs[48*2,:], color ='red')
+    axs[4].plot(times, temp[48*2,:])
+    axs[4].set_title(depth[48*2])
+    axs[4].set_ylim(0,10)
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     fig.legend(lines, labels)
