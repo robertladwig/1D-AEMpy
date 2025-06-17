@@ -12,14 +12,15 @@ from numba import jit
 #os.chdir("/home/robert/Projects/1D-AEMpy/src")
 #os.chdir("C:/Users/ladwi/Documents/Projects/R/1D-AEMpy/src")
 #os.chdir("D:/bensd/Documents/Python_Workspace/1D-AEMpy/src")
-os.chdir("C:/Users/au740615/Documents/Projects/1d_aempy/1D-AEMpy/src")
+#os.chdir("C:/Users/au740615/Documents/Projects/1d_aempy/1D-AEMpy/src")
+os.chdir("/Users/au740615/Documents/projects/1D-AEMpy/src")
 from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, run_wq_model_time, wq_initial_profile, provide_phosphorus, do_sat_calc, calc_dens, run_kE_model #, heating_module, diffusion_module, mixing_module, convection_module, ice_module
 
 
 ## lake configurations
 zmax = 25 # maximum lake depth
 nx = 25 * 2 # number of layers we will have
-dt = 3600 # 24 hours times 60 min/hour times 60 seconds/min
+dt = 100 # 24 hours times 60 min/hour times 60 seconds/min
 dx = zmax/nx # spatial step
 
 ## area and depth values of our lake 
@@ -129,7 +130,7 @@ ax.contour(np.arange(.5, temp.shape[1]), np.arange(.5, temp.shape[0]), calc_dens
            linestyles = 'dotted')
 ax.set_ylabel("Depth (m)", fontsize=15)
 ax.set_xlabel("", fontsize=15)    
-ax.collections[0].colorbar.set_label("Water temperature  ($^\circ$C)")
+ax.collections[0].colorbar.set_label("Water temperature  (C)")#($^\circ$C)")
 xticks_ix = np.array(ax.get_xticks()).astype(int)
 time_label = times[xticks_ix]
 nelement = len(times)//2
